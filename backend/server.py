@@ -474,6 +474,33 @@ async def get_devices(
         query["przypisany_do"] = assigned_to
     
     devices = await db.devices.find(query, {"_id": 0}).to_list(1000)
+    
+    # For installed devices, add installation info
+    installed_device_ids = [d["device_id"] for d in devices if d.get("status") == "zainstalowany"]
+    if installed_device_ids:
+        installations = await db.installations.find(
+            {"device_id": {"$in": installed_device_ids}},
+            {"_id": 0}
+        ).sort("data_instalacji", -1).to_list(1000)
+        
+        # Create a map of device_id to latest installation
+        installation_map = {}
+        for inst in installations:
+            device_id = inst.get("device_id")
+            if device_id and device_id not in installation_map:
+                installation_map[device_id] = inst
+        
+        # Add installation info to devices
+        for device in devices:
+            if device.get("status") == "zainstalowany" and device["device_id"] in installation_map:
+                inst = installation_map[device["device_id"]]
+                device["instalacja"] = {
+                    "adres": inst.get("adres") or inst.get("adres_klienta"),
+                    "data_instalacji": inst.get("data_instalacji"),
+                    "rodzaj_zlecenia": inst.get("rodzaj_zlecenia"),
+                    "instalator_id": inst.get("user_id")
+                }
+    
     return devices
 
 @api_router.get("/devices/inventory/summary")
