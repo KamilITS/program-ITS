@@ -403,7 +403,7 @@ async def create_installation(request: Request, user: User = Depends(require_use
         "rodzaj_zlecenia": body.get("rodzaj_zlecenia", "instalacja")
     }
     
-    await db.installations.insert_one(installation)
+    result = await db.installations.insert_one(installation)
     
     # Update device status
     await db.devices.update_one(
@@ -411,7 +411,8 @@ async def create_installation(request: Request, user: User = Depends(require_use
         {"$set": {"status": "zainstalowany"}}
     )
     
-    return installation
+    # Return the installation without _id
+    return {k: v for k, v in installation.items() if k != "_id"}
 
 @api_router.get("/installations")
 async def get_installations(
