@@ -98,6 +98,13 @@ export default function Devices() {
     }
   }, [isAuthenticated]);
 
+  // Set default filter to 'przypisany' for employees
+  useEffect(() => {
+    if (user && user.role !== 'admin' && statusFilter === null) {
+      setStatusFilter('przypisany');
+    }
+  }, [user]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
