@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
 """
 Backend API Testing for Magazyn ITS Kielce
-Tests all backend endpoints with proper authentication and data setup
+Testing new inventory endpoints and updated installation API
 """
 
 import requests
 import json
-import os
-import subprocess
-from datetime import datetime, timezone
 import uuid
+from datetime import datetime
+import os
+from dotenv import load_dotenv
 
-# Get backend URL from frontend .env
-BACKEND_URL = "https://inventory-plus-101.preview.emergentagent.com"
+# Load environment variables
+load_dotenv('/app/frontend/.env')
+
+# Get backend URL from frontend env
+BACKEND_URL = os.getenv('EXPO_PUBLIC_BACKEND_URL', 'https://inventory-plus-101.preview.emergentagent.com')
 API_BASE = f"{BACKEND_URL}/api"
 
-# Test data
-TEST_USER_ID = "user_test123"
-TEST_SESSION_TOKEN = "test_session_token_123"
-TEST_DEVICE_ID = "dev_test123"
+# Test credentials
+ADMIN_EMAIL = "kamil@magazyn.its.kielce.pl"
+ADMIN_PASSWORD = "kamil678@"
 
 class BackendTester:
     def __init__(self):
