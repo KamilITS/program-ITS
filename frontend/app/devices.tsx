@@ -61,6 +61,10 @@ export default function Devices() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   
+  // Transfer device modal
+  const [transferModalVisible, setTransferModalVisible] = useState(false);
+  const [deviceToTransfer, setDeviceToTransfer] = useState<Device | null>(null);
+  
   // Multi-select mode
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
