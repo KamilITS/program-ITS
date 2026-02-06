@@ -699,6 +699,104 @@ export default function Devices() {
           </View>
         </View>
       </Modal>
+
+      {/* Advanced Filters Modal */}
+      <Modal
+        visible={showFiltersModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFiltersModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filtry zaawansowane</Text>
+              <TouchableOpacity onPress={() => setShowFiltersModal(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.filtersModalContent}>
+              {/* Filter by Device Name */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Filtruj po nazwie urządzenia</Text>
+                <TouchableOpacity
+                  style={[styles.filterOption, !nameFilter && styles.filterOptionActive]}
+                  onPress={() => setNameFilter(null)}
+                >
+                  <Ionicons 
+                    name={!nameFilter ? 'radio-button-on' : 'radio-button-off'} 
+                    size={20} 
+                    color={!nameFilter ? '#3b82f6' : '#888'} 
+                  />
+                  <Text style={[styles.filterOptionText, !nameFilter && styles.filterOptionTextActive]}>
+                    Wszystkie nazwy
+                  </Text>
+                </TouchableOpacity>
+                {deviceNames.map(name => (
+                  <TouchableOpacity
+                    key={name}
+                    style={[styles.filterOption, nameFilter === name && styles.filterOptionActive]}
+                    onPress={() => setNameFilter(name)}
+                  >
+                    <Ionicons 
+                      name={nameFilter === name ? 'radio-button-on' : 'radio-button-off'} 
+                      size={20} 
+                      color={nameFilter === name ? '#3b82f6' : '#888'} 
+                    />
+                    <Text style={[styles.filterOptionText, nameFilter === name && styles.filterOptionTextActive]}>
+                      {name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Filter by Worker */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Filtruj po pracowniku</Text>
+                <TouchableOpacity
+                  style={[styles.filterOption, !workerFilter && styles.filterOptionActive]}
+                  onPress={() => setWorkerFilter(null)}
+                >
+                  <Ionicons 
+                    name={!workerFilter ? 'radio-button-on' : 'radio-button-off'} 
+                    size={20} 
+                    color={!workerFilter ? '#3b82f6' : '#888'} 
+                  />
+                  <Text style={[styles.filterOptionText, !workerFilter && styles.filterOptionTextActive]}>
+                    Wszyscy pracownicy
+                  </Text>
+                </TouchableOpacity>
+                {workers.map(worker => (
+                  <TouchableOpacity
+                    key={worker.user_id}
+                    style={[styles.filterOption, workerFilter === worker.user_id && styles.filterOptionActive]}
+                    onPress={() => setWorkerFilter(worker.user_id)}
+                  >
+                    <Ionicons 
+                      name={workerFilter === worker.user_id ? 'radio-button-on' : 'radio-button-off'} 
+                      size={20} 
+                      color={workerFilter === worker.user_id ? '#3b82f6' : '#888'} 
+                    />
+                    <Text style={[styles.filterOptionText, workerFilter === worker.user_id && styles.filterOptionTextActive]}>
+                      {worker.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            <View style={styles.filtersModalFooter}>
+              <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
+                <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.applyFiltersButton} onPress={() => setShowFiltersModal(false)}>
+                <Text style={styles.applyFiltersText}>Zastosuj</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
