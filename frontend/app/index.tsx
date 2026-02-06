@@ -1,18 +1,80 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Index() {
-  const { user, isLoading, isAuthenticated, login } = useAuth();
+  const { user, isLoading, isAuthenticated, login, register } = useAuth();
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated && !isLoading) {
       router.replace('/dashboard');
     }
   }, [isAuthenticated, isLoading]);
+
+  const handleSubmit = async () => {
+    setError('');
+    
+    if (!email.trim() || !password.trim()) {
+      setError('Wypełnij wszystkie pola');
+      return;
+    }
+    
+    if (!isLoginMode && !name.trim()) {
+      setError('Podaj swoje imię');
+      return;
+    }
+    
+    if (password.length < 6) {
+      setError('Hasło musi mieć minimum 6 znaków');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      let result;
+      if (isLoginMode) {
+        result = await login(email.trim(), password);
+      } else {
+        result = await register(email.trim(), password, name.trim());
+      }
+      
+      if (!result.success) {
+        setError(result.error || 'Wystąpił błąd');
+      }
+    } catch (err) {
+      setError('Błąd połączenia z serwerem');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsLoginMode(!isLoginMode);
+    setError('');
+    setPassword('');
+  };
 
   if (isLoading) {
     return (
@@ -25,41 +87,141 @@ export default function Index() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <Ionicons name="cube-outline" size={80} color="#3b82f6" />
-          <Text style={styles.title}>Magazyn ITS</Text>
-          <Text style={styles.subtitle}>Kielce</Text>
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            <Ionicons name="cube-outline" size={80} color="#3b82f6" />
+            <Text style={styles.title}>Magazyn ITS</Text>
+            <Text style={styles.subtitle}>Kielce</Text>
+          </View>
 
-        <Text style={styles.description}>
-          System zarządzania magazynem{'\n'}i pracownikami
-        </Text>
+          <Text style={styles.description}>
+            System zarządzania magazynem{'\n'}i pracownikami
+          </Text>
 
-        <View style={styles.features}>
-          <View style={styles.featureItem}>
-            <Ionicons name="barcode-outline" size={24} color="#3b82f6" />
-            <Text style={styles.featureText}>Skanowanie urządzeń</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Ionicons name="location-outline" size={24} color="#3b82f6" />
-            <Text style={styles.featureText}>Śledzenie lokalizacji</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Ionicons name="chatbubbles-outline" size={24} color="#3b82f6" />
-            <Text style={styles.featureText}>Komunikator</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Ionicons name="calendar-outline" size={24} color="#3b82f6" />
-            <Text style={styles.featureText}>Planer zadań</Text>
-          </View>
-        </View>
+          {/* Form */}
+          <View style={styles.formContainer}>
+            <Text style={styles.formTitle}>
+              {isLoginMode ? 'Logowanie' : 'Rejestracja'}
+            </Text>
 
-        <TouchableOpacity style={styles.loginButton} onPress={login}>
-          <Ionicons name="logo-google" size={24} color="#fff" />
-          <Text style={styles.loginButtonText}>Zaloguj przez Google</Text>
-        </TouchableOpacity>
-      </View>
+            {!isLoginMode && (
+              <View style={styles.inputContainer}>
+                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Imię i nazwisko"
+                  placeholderTextColor="#666"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                />
+              </View>
+            )}
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-outline" size={20} color="#888" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor="#666"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="lock-closed-outline" size={20} color="#888" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Hasło"
+                placeholderTextColor="#666"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={18} color="#ef4444" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            <TouchableOpacity
+              style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons
+                    name={isLoginMode ? 'log-in-outline' : 'person-add-outline'}
+                    size={24}
+                    color="#fff"
+                  />
+                  <Text style={styles.submitButtonText}>
+                    {isLoginMode ? 'Zaloguj się' : 'Zarejestruj się'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.toggleButton} onPress={toggleMode}>
+              <Text style={styles.toggleText}>
+                {isLoginMode ? 'Nie masz konta? ' : 'Masz już konto? '}
+                <Text style={styles.toggleTextBold}>
+                  {isLoginMode ? 'Zarejestruj się' : 'Zaloguj się'}
+                </Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Features */}
+          <View style={styles.features}>
+            <View style={styles.featureItem}>
+              <Ionicons name="barcode-outline" size={20} color="#3b82f6" />
+              <Text style={styles.featureText}>Skanowanie urządzeń</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="location-outline" size={20} color="#3b82f6" />
+              <Text style={styles.featureText}>Śledzenie lokalizacji</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="chatbubbles-outline" size={20} color="#3b82f6" />
+              <Text style={styles.featureText}>Komunikator</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="calendar-outline" size={20} color="#3b82f6" />
+              <Text style={styles.featureText}>Planer zadań</Text>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -80,66 +242,134 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
   },
-  content: {
+  keyboardView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 20,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 16,
+    marginTop: 20,
   },
   title: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
-    marginTop: 16,
+    marginTop: 12,
   },
   subtitle: {
-    fontSize: 24,
+    fontSize: 20,
     color: '#3b82f6',
     fontWeight: '600',
   },
   description: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#888',
     textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
+    marginBottom: 24,
+    lineHeight: 20,
   },
-  features: {
-    width: '100%',
-    marginBottom: 48,
+  formContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
   },
-  featureItem: {
+  formTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#0a0a0a',
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#333',
   },
-  featureText: {
+  inputIcon: {
+    paddingLeft: 16,
+  },
+  input: {
+    flex: 1,
     color: '#fff',
     fontSize: 16,
-    marginLeft: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
   },
-  loginButton: {
+  eyeButton: {
+    padding: 14,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
+  },
+  submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#3b82f6',
     paddingVertical: 16,
-    paddingHorizontal: 32,
     borderRadius: 12,
-    width: '100%',
+    marginTop: 8,
   },
-  loginButtonText: {
+  submitButtonDisabled: {
+    backgroundColor: '#333',
+  },
+  submitButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
-    marginLeft: 12,
+    marginLeft: 10,
+  },
+  toggleButton: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  toggleText: {
+    color: '#888',
+    fontSize: 14,
+  },
+  toggleTextBold: {
+    color: '#3b82f6',
+    fontWeight: '600',
+  },
+  features: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  featureText: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 8,
   },
 });
