@@ -224,10 +224,25 @@ export default function Devices() {
 
   const isAdmin = user?.role === 'admin';
 
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pl-PL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const renderDeviceItem = (device: Device) => {
     const assignedWorker = workers.find((w) => w.user_id === device.przypisany_do);
+    const instalatorWorker = device.instalacja?.instalator_id 
+      ? workers.find((w) => w.user_id === device.instalacja?.instalator_id)
+      : null;
     const isSelected = selectedDevices.has(device.device_id);
     const isAvailable = device.status === 'dostepny';
+    const isInstalled = device.status === 'zainstalowany';
 
     return (
       <TouchableOpacity
@@ -235,6 +250,7 @@ export default function Devices() {
         style={[
           styles.deviceItem,
           isSelected && styles.deviceItemSelected,
+          isInstalled && styles.deviceItemInstalled,
         ]}
         onPress={() => {
           if (selectionMode && isAvailable) {
@@ -266,10 +282,47 @@ export default function Devices() {
           {device.kod_kreskowy && (
             <Text style={styles.deviceCode}>Kod: {device.kod_kreskowy}</Text>
           )}
-          {assignedWorker && (
+          {assignedWorker && !isInstalled && (
             <View style={styles.assignedBadge}>
               <Ionicons name="person" size={12} color="#3b82f6" />
               <Text style={styles.assignedName}>{assignedWorker.name}</Text>
+            </View>
+          )}
+          
+          {/* Installation info for installed devices */}
+          {isInstalled && device.instalacja && (
+            <View style={styles.installationInfo}>
+              {device.instalacja.adres && (
+                <View style={styles.installationRow}>
+                  <Ionicons name="location" size={14} color="#f59e0b" />
+                  <Text style={styles.installationAddress} numberOfLines={2}>
+                    {device.instalacja.adres}
+                  </Text>
+                </View>
+              )}
+              {device.instalacja.data_instalacji && (
+                <View style={styles.installationRow}>
+                  <Ionicons name="calendar" size={14} color="#888" />
+                  <Text style={styles.installationDate}>
+                    {formatDate(device.instalacja.data_instalacji)}
+                  </Text>
+                </View>
+              )}
+              {instalatorWorker && (
+                <View style={styles.installationRow}>
+                  <Ionicons name="person" size={14} color="#10b981" />
+                  <Text style={styles.installationWorker}>
+                    Instalator: {instalatorWorker.name}
+                  </Text>
+                </View>
+              )}
+              {device.instalacja.rodzaj_zlecenia && (
+                <View style={styles.installationTypeBadge}>
+                  <Text style={styles.installationTypeText}>
+                    {device.instalacja.rodzaj_zlecenia}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>
