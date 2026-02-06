@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
 import { router } from 'expo-router';
@@ -17,11 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Index() {
-  const { user, isLoading, isAuthenticated, login, register } = useAuth();
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  const { user, isLoading, isAuthenticated, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -40,25 +37,10 @@ export default function Index() {
       return;
     }
     
-    if (!isLoginMode && !name.trim()) {
-      setError('Podaj swoje imię');
-      return;
-    }
-    
-    if (password.length < 6) {
-      setError('Hasło musi mieć minimum 6 znaków');
-      return;
-    }
-    
     setIsSubmitting(true);
     
     try {
-      let result;
-      if (isLoginMode) {
-        result = await login(email.trim(), password);
-      } else {
-        result = await register(email.trim(), password, name.trim());
-      }
+      const result = await login(email.trim(), password);
       
       if (!result.success) {
         setError(result.error || 'Wystąpił błąd');
@@ -68,12 +50,6 @@ export default function Index() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const toggleMode = () => {
-    setIsLoginMode(!isLoginMode);
-    setError('');
-    setPassword('');
   };
 
   if (isLoading) {
@@ -106,25 +82,9 @@ export default function Index() {
             System zarządzania magazynem{'\n'}i pracownikami
           </Text>
 
-          {/* Form */}
+          {/* Login Form */}
           <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>
-              {isLoginMode ? 'Logowanie' : 'Rejestracja'}
-            </Text>
-
-            {!isLoginMode && (
-              <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#888" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Imię i nazwisko"
-                  placeholderTextColor="#666"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                />
-              </View>
-            )}
+            <Text style={styles.formTitle}>Logowanie</Text>
 
             <View style={styles.inputContainer}>
               <Ionicons name="mail-outline" size={20} color="#888" style={styles.inputIcon} />
@@ -179,26 +139,18 @@ export default function Index() {
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <>
-                  <Ionicons
-                    name={isLoginMode ? 'log-in-outline' : 'person-add-outline'}
-                    size={24}
-                    color="#fff"
-                  />
-                  <Text style={styles.submitButtonText}>
-                    {isLoginMode ? 'Zaloguj się' : 'Zarejestruj się'}
-                  </Text>
+                  <Ionicons name="log-in-outline" size={24} color="#fff" />
+                  <Text style={styles.submitButtonText}>Zaloguj się</Text>
                 </>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.toggleButton} onPress={toggleMode}>
-              <Text style={styles.toggleText}>
-                {isLoginMode ? 'Nie masz konta? ' : 'Masz już konto? '}
-                <Text style={styles.toggleTextBold}>
-                  {isLoginMode ? 'Zarejestruj się' : 'Zaloguj się'}
-                </Text>
+            <View style={styles.infoBox}>
+              <Ionicons name="information-circle-outline" size={18} color="#3b82f6" />
+              <Text style={styles.infoText}>
+                Konto tworzy administrator.{'\n'}Skontaktuj się z przełożonym.
               </Text>
-            </TouchableOpacity>
+            </View>
           </View>
 
           {/* Features */}
@@ -340,17 +292,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 10,
   },
-  toggleButton: {
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 8,
+    padding: 12,
     marginTop: 16,
-    alignItems: 'center',
   },
-  toggleText: {
+  infoText: {
     color: '#888',
-    fontSize: 14,
-  },
-  toggleTextBold: {
-    color: '#3b82f6',
-    fontWeight: '600',
+    fontSize: 13,
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 18,
   },
   features: {
     flexDirection: 'row',
