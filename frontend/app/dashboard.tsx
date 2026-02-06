@@ -250,6 +250,15 @@ export default function Dashboard() {
               </TouchableOpacity>
               
               <TouchableOpacity
+                style={[styles.adminButton, { borderColor: '#10b981', borderWidth: 1 }]}
+                onPress={() => router.push('/assign')}
+              >
+                <Ionicons name="scan" size={24} color="#10b981" />
+                <Text style={[styles.adminButtonText, { color: '#10b981' }]}>Przypisz urządzenie (skaner)</Text>
+                <Ionicons name="chevron-forward" size={20} color="#10b981" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
                 style={styles.adminButton}
                 onPress={() => router.push('/inventory')}
               >
