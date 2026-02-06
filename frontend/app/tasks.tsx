@@ -1,0 +1,713 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  TextInput,
+  Modal,
+  Alert,
+  ScrollView,
+  RefreshControl,
+  Platform,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { useAuth } from '../src/context/AuthContext';
+import { apiFetch } from '../src/utils/api';
+import { Ionicons } from '@expo/vector-icons';
+import { format, addDays, isBefore, isToday, isTomorrow } from 'date-fns';
+import { pl } from 'date-fns/locale';
+
+interface Task {
+  task_id: string;
+  title: string;
+  description?: string;
+  assigned_to: string;
+  assigned_by: string;
+  due_date: string;
+  status: string;
+  priority: string;
+}
+
+interface Worker {
+  user_id: string;
+  name: string;
+  email: string;
+}
+
+export default function Tasks() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    assigned_to: '',
+    due_date: format(addDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
+    priority: 'normalne',
+  });
+
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/');
+    }
+  }, [isLoading, isAuthenticated]);
+
+  const loadData = async () => {
+    try {
+      const [tasksData, workersData] = await Promise.all([
+        apiFetch('/api/tasks'),
+        apiFetch('/api/workers'),
+      ]);
+      setTasks(tasksData);
+      setWorkers(workersData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
+  const handleCreateTask = async () => {
+    if (!newTask.title.trim() || !newTask.assigned_to) {
+      Alert.alert('Błąd', 'Wypełnij tytuł i przypisz pracownika');
+      return;
+    }
+
+    try {
+      await apiFetch('/api/tasks', {
+        method: 'POST',
+        body: newTask,
+      });
+      setModalVisible(false);
+      setNewTask({
+        title: '',
+        description: '',
+        assigned_to: '',
+        due_date: format(addDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
+        priority: 'normalne',
+      });
+      await loadData();
+      Alert.alert('Sukces', 'Zadanie zostało utworzone');
+    } catch (error: any) {
+      Alert.alert('Błąd', error.message);
+    }
+  };
+
+  const handleUpdateStatus = async (taskId: string, newStatus: string) => {
+    try {
+      await apiFetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
+        body: { status: newStatus },
+      });
+      await loadData();
+    } catch (error: any) {
+      Alert.alert('Błąd', error.message);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    Alert.alert(
+      'Usuń zadanie',
+      'Czy na pewno chcesz usunąć to zadanie?',
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Usuń',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiFetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+              await loadData();
+            } catch (error: any) {
+              Alert.alert('Błąd', error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const filteredTasks = tasks.filter((task) => 
+    !statusFilter || task.status === statusFilter
+  );
+
+  const statusFilters = [
+    { key: null, label: 'Wszystkie' },
+    { key: 'oczekujace', label: 'Oczekujące' },
+    { key: 'w_trakcie', label: 'W trakcie' },
+    { key: 'zakonczone', label: 'Zakończone' },
+  ];
+
+  const priorities = ['niskie', 'normalne', 'wysokie', 'pilne'];
+
+  const getDateLabel = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isToday(date)) return 'Dzisiaj';
+    if (isTomorrow(date)) return 'Jutro';
+    return format(date, 'd MMM', { locale: pl });
+  };
+
+  const renderTask = ({ item }: { item: Task }) => {
+    const assignedWorker = workers.find((w) => w.user_id === item.assigned_to);
+    const dueDate = new Date(item.due_date);
+    const isOverdue = isBefore(dueDate, new Date()) && item.status !== 'zakonczone';
+
+    return (
+      <View style={[
+        styles.taskCard,
+        item.status === 'zakonczone' && styles.taskCardCompleted,
+      ]}>
+        <View style={styles.taskHeader}>
+          <TouchableOpacity
+            style={[
+              styles.statusCheckbox,
+              item.status === 'zakonczone' && styles.statusCheckboxCompleted,
+            ]}
+            onPress={() => handleUpdateStatus(
+              item.task_id,
+              item.status === 'zakonczone' ? 'oczekujace' : 'zakonczone'
+            )}
+          >
+            {item.status === 'zakonczone' && (
+              <Ionicons name="checkmark" size={16} color="#fff" />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.taskInfo}>
+            <Text style={[
+              styles.taskTitle,
+              item.status === 'zakonczone' && styles.taskTitleCompleted,
+            ]}>
+              {item.title}
+            </Text>
+            {item.description && (
+              <Text style={styles.taskDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
+          </View>
+
+          {isAdmin && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDeleteTask(item.task_id)}
+            >
+              <Ionicons name="trash-outline" size={18} color="#ef4444" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.taskMeta}>
+          <View style={[
+            styles.priorityBadge,
+            item.priority === 'niskie' && { backgroundColor: '#6b7280' },
+            item.priority === 'normalne' && { backgroundColor: '#3b82f6' },
+            item.priority === 'wysokie' && { backgroundColor: '#f59e0b' },
+            item.priority === 'pilne' && { backgroundColor: '#ef4444' },
+          ]}>
+            <Text style={styles.priorityText}>{item.priority}</Text>
+          </View>
+
+          <View style={[styles.dueDateBadge, isOverdue && styles.overdueBadge]}>
+            <Ionicons
+              name="calendar-outline"
+              size={14}
+              color={isOverdue ? '#ef4444' : '#888'}
+            />
+            <Text style={[styles.dueDateText, isOverdue && styles.overdueText]}>
+              {getDateLabel(item.due_date)}
+            </Text>
+          </View>
+
+          {assignedWorker && (
+            <View style={styles.assignedBadge}>
+              <Ionicons name="person-outline" size={14} color="#888" />
+              <Text style={styles.assignedText}>{assignedWorker.name}</Text>
+            </View>
+          )}
+        </View>
+
+        {item.status !== 'zakonczone' && (
+          <View style={styles.taskActions}>
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                item.status === 'oczekujace' && styles.statusButtonActive,
+              ]}
+              onPress={() => handleUpdateStatus(item.task_id, 'oczekujace')}
+            >
+              <Text style={styles.statusButtonText}>Oczekuje</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                item.status === 'w_trakcie' && styles.statusButtonActive,
+              ]}
+              onPress={() => handleUpdateStatus(item.task_id, 'w_trakcie')}
+            >
+              <Text style={styles.statusButtonText}>W trakcie</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Zadania</Text>
+        {isAdmin && (
+          <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
+            <Ionicons name="add" size={28} color="#3b82f6" />
+          </TouchableOpacity>
+        )}
+        {!isAdmin && <View style={{ width: 40 }} />}
+      </View>
+
+      {/* Status Filters */}
+      <View style={styles.filtersContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {statusFilters.map((filter) => (
+            <TouchableOpacity
+              key={filter.key || 'all'}
+              style={[
+                styles.filterButton,
+                statusFilter === filter.key && styles.filterButtonActive,
+              ]}
+              onPress={() => setStatusFilter(filter.key)}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  statusFilter === filter.key && styles.filterTextActive,
+                ]}
+              >
+                {filter.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <FlatList
+        data={filteredTasks}
+        renderItem={renderTask}
+        keyExtractor={(item) => item.task_id}
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="clipboard-outline" size={64} color="#333" />
+            <Text style={styles.emptyText}>Brak zadań</Text>
+          </View>
+        }
+      />
+
+      {/* Create Task Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Nowe zadanie</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.inputLabel}>Tytuł</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Wprowadź tytuł..."
+                placeholderTextColor="#888"
+                value={newTask.title}
+                onChangeText={(text) => setNewTask({ ...newTask, title: text })}
+              />
+
+              <Text style={styles.inputLabel}>Opis</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Wprowadź opis..."
+                placeholderTextColor="#888"
+                value={newTask.description}
+                onChangeText={(text) => setNewTask({ ...newTask, description: text })}
+                multiline
+                numberOfLines={3}
+              />
+
+              <Text style={styles.inputLabel}>Przypisz do</Text>
+              <View style={styles.workerSelect}>
+                {workers.map((worker) => (
+                  <TouchableOpacity
+                    key={worker.user_id}
+                    style={[
+                      styles.workerOption,
+                      newTask.assigned_to === worker.user_id && styles.workerOptionActive,
+                    ]}
+                    onPress={() => setNewTask({ ...newTask, assigned_to: worker.user_id })}
+                  >
+                    <Text style={[
+                      styles.workerOptionText,
+                      newTask.assigned_to === worker.user_id && styles.workerOptionTextActive,
+                    ]}>
+                      {worker.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.inputLabel}>Priorytet</Text>
+              <View style={styles.prioritySelect}>
+                {priorities.map((p) => (
+                  <TouchableOpacity
+                    key={p}
+                    style={[
+                      styles.priorityOption,
+                      newTask.priority === p && styles.priorityOptionActive,
+                    ]}
+                    onPress={() => setNewTask({ ...newTask, priority: p })}
+                  >
+                    <Text style={[
+                      styles.priorityOptionText,
+                      newTask.priority === p && styles.priorityOptionTextActive,
+                    ]}>
+                      {p}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.inputLabel}>Termin</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="YYYY-MM-DDTHH:mm"
+                placeholderTextColor="#888"
+                value={newTask.due_date}
+                onChangeText={(text) => setNewTask({ ...newTask, due_date: text })}
+              />
+            </ScrollView>
+
+            <TouchableOpacity style={styles.createButton} onPress={handleCreateTask}>
+              <Text style={styles.createButtonText}>Utwórz zadanie</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
+  },
+  backButton: {
+    padding: 8,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  addButton: {
+    padding: 8,
+  },
+  filtersContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#1a1a1a',
+    marginRight: 8,
+  },
+  filterButtonActive: {
+    backgroundColor: '#3b82f6',
+  },
+  filterText: {
+    color: '#888',
+    fontSize: 14,
+  },
+  filterTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  listContainer: {
+    padding: 16,
+    paddingTop: 0,
+  },
+  taskCard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  taskCardCompleted: {
+    opacity: 0.6,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  statusCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  statusCheckboxCompleted: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+  },
+  taskInfo: {
+    flex: 1,
+  },
+  taskTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  taskTitleCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#888',
+  },
+  taskDescription: {
+    color: '#888',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  taskMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+    gap: 8,
+  },
+  priorityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  priorityText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  dueDateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#0a0a0a',
+    borderRadius: 6,
+    gap: 4,
+  },
+  overdueBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  dueDateText: {
+    color: '#888',
+    fontSize: 12,
+  },
+  overdueText: {
+    color: '#ef4444',
+  },
+  assignedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#0a0a0a',
+    borderRadius: 6,
+    gap: 4,
+  },
+  assignedText: {
+    color: '#888',
+    fontSize: 12,
+  },
+  taskActions: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  statusButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#0a0a0a',
+  },
+  statusButtonActive: {
+    backgroundColor: '#3b82f6',
+  },
+  statusButtonText: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    color: '#888',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: 400,
+  },
+  inputLabel: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  input: {
+    backgroundColor: '#0a0a0a',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: '#fff',
+    fontSize: 16,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  workerSelect: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  workerOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#0a0a0a',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  workerOptionActive: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+  workerOptionText: {
+    color: '#888',
+    fontSize: 14,
+  },
+  workerOptionTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  prioritySelect: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  priorityOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#0a0a0a',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  priorityOptionActive: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+  priorityOptionText: {
+    color: '#888',
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  priorityOptionTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  createButton: {
+    backgroundColor: '#3b82f6',
+    margin: 20,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  createButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
