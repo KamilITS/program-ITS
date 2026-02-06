@@ -135,27 +135,29 @@ export default function Dashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
         }
       >
-        {/* Quick Stats */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Ionicons name="cube-outline" size={32} color="#3b82f6" />
-            <Text style={styles.statNumber}>{devicesCount}</Text>
-            <Text style={styles.statLabel}>Urządzenia</Text>
+        {/* Quick Stats - only for admin */}
+        {isAdmin && (
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Ionicons name="cube-outline" size={32} color="#3b82f6" />
+              <Text style={styles.statNumber}>{devicesCount}</Text>
+              <Text style={styles.statLabel}>Urządzenia</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="checkmark-circle-outline" size={32} color="#10b981" />
+              <Text style={styles.statNumber}>{stats?.total || 0}</Text>
+              <Text style={styles.statLabel}>Instalacje</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="clipboard-outline" size={32} color="#f59e0b" />
+              <Text style={styles.statNumber}>{tasksCount}</Text>
+              <Text style={styles.statLabel}>Zadania</Text>
+            </View>
           </View>
-          <View style={styles.statCard}>
-            <Ionicons name="checkmark-circle-outline" size={32} color="#10b981" />
-            <Text style={styles.statNumber}>{stats?.total || 0}</Text>
-            <Text style={styles.statLabel}>Instalacje</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="clipboard-outline" size={32} color="#f59e0b" />
-            <Text style={styles.statNumber}>{tasksCount}</Text>
-            <Text style={styles.statLabel}>Zadania</Text>
-          </View>
-        </View>
+        )}
 
-        {/* Installation Types */}
-        {stats && Object.keys(stats.by_type).length > 0 && (
+        {/* Installation Types - only for admin */}
+        {isAdmin && stats && Object.keys(stats.by_type).length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Typy zleceń</Text>
             <View style={styles.typesList}>
