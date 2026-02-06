@@ -280,6 +280,15 @@ export default function Dashboard() {
               
               <TouchableOpacity
                 style={styles.adminButton}
+                onPress={() => router.push('/backup')}
+              >
+                <Ionicons name="cloud-download-outline" size={24} color="#fff" />
+                <Text style={styles.adminButtonText}>Kopie zapasowe</Text>
+                <Ionicons name="chevron-forward" size={20} color="#888" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.adminButton}
                 onPress={() => router.push('/stats')}
               >
                 <Ionicons name="stats-chart-outline" size={24} color="#fff" />
