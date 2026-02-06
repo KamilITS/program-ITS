@@ -233,6 +233,8 @@ export default function AssignDevice() {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 autoCapitalize="characters"
+                onSubmitEditing={() => searchDevice(searchQuery)}
+                returnKeyType="search"
               />
               <TouchableOpacity
                 style={styles.searchButton}
