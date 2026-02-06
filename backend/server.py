@@ -686,7 +686,7 @@ async def assign_multiple_devices(request: Request, admin: dict = Depends(requir
 
 @api_router.post("/devices/{device_id}/restore")
 async def restore_device(device_id: str, admin: dict = Depends(require_admin)):
-    """Restore installed device back to available status (admin only)"""
+    """Restore installed device back to available status for the original installer (admin only)"""
     # Check if device exists and is installed
     device = await db.devices.find_one({"device_id": device_id})
     if not device:
@@ -695,16 +695,67 @@ async def restore_device(device_id: str, admin: dict = Depends(require_admin)):
     if device.get("status") != "zainstalowany":
         raise HTTPException(status_code=400, detail="Urządzenie nie jest zainstalowane")
     
-    # Restore device to available status
+    # Find the original installer from installations
+    installation = await db.installations.find_one(
+        {"device_id": device_id},
+        sort=[("data_instalacji", -1)]
+    )
+    
+    # Get the original installer - if not found, assign to admin
+    original_installer = installation.get("user_id") if installation else admin["user_id"]
+    
+    # Restore device to available status and assign to original installer
     result = await db.devices.update_one(
         {"device_id": device_id},
-        {"$set": {"status": "dostepny", "przypisany_do": None}}
+        {"$set": {"status": "dostepny", "przypisany_do": original_installer}}
     )
     
     if result.modified_count == 0:
         raise HTTPException(status_code=500, detail="Nie udało się przywrócić urządzenia")
     
-    return {"message": "Urządzenie zostało przywrócone do statusu 'Dostępne'"}
+    # Get installer name for response
+    installer = await db.users.find_one({"user_id": original_installer})
+    installer_name = installer.get("name", "Nieznany") if installer else "Nieznany"
+    
+    return {
+        "message": f"Urządzenie zostało przywrócone do użytkownika: {installer_name}",
+        "assigned_to": original_installer,
+        "assigned_to_name": installer_name
+    }
+
+@api_router.post("/devices/{device_id}/transfer")
+async def transfer_device(device_id: str, request: Request, admin: dict = Depends(require_admin)):
+    """Transfer device from one worker to another (admin only)"""
+    body = await request.json()
+    new_worker_id = body.get("worker_id")
+    
+    if not new_worker_id:
+        raise HTTPException(status_code=400, detail="Wymagane worker_id")
+    
+    # Check if device exists
+    device = await db.devices.find_one({"device_id": device_id})
+    if not device:
+        raise HTTPException(status_code=404, detail="Nie znaleziono urządzenia")
+    
+    # Check if new worker exists
+    new_worker = await db.users.find_one({"user_id": new_worker_id})
+    if not new_worker:
+        raise HTTPException(status_code=404, detail="Nie znaleziono pracownika")
+    
+    # Transfer device
+    result = await db.devices.update_one(
+        {"device_id": device_id},
+        {"$set": {"przypisany_do": new_worker_id, "status": "przypisany"}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=500, detail="Nie udało się przenieść urządzenia")
+    
+    return {
+        "message": f"Urządzenie przeniesione do: {new_worker.get('name', 'Nieznany')}",
+        "new_worker_id": new_worker_id,
+        "new_worker_name": new_worker.get("name")
+    }
 
 @api_router.get("/devices/scan/{code}")
 async def scan_device(code: str, user: dict = Depends(require_user)):
