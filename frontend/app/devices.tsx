@@ -233,27 +233,47 @@ export default function Devices() {
   };
 
   const handleRestoreDevice = async (device: Device) => {
-    Alert.alert(
-      'Przywróć urządzenie',
-      `Czy na pewno chcesz przywrócić urządzenie "${device.numer_seryjny}" do statusu "Dostępne"?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Przywróć',
-          onPress: async () => {
-            try {
-              await apiFetch(`/api/devices/${device.device_id}/restore`, {
-                method: 'POST',
-              });
-              Alert.alert('Sukces', 'Urządzenie zostało przywrócone do statusu "Dostępne"');
-              loadData();
-            } catch (error: any) {
-              Alert.alert('Błąd', error.message);
-            }
-          }
+    const confirmRestore = () => {
+      if (Platform.OS === 'web') {
+        return window.confirm(`Czy na pewno chcesz przywrócić urządzenie "${device.numer_seryjny}" do statusu "Dostępne"?`);
+      }
+      return true; // For mobile, we handle via Alert
+    };
+
+    const performRestore = async () => {
+      try {
+        await apiFetch(`/api/devices/${device.device_id}/restore`, {
+          method: 'POST',
+        });
+        if (Platform.OS === 'web') {
+          window.alert('Urządzenie zostało przywrócone do statusu "Dostępne"');
+        } else {
+          Alert.alert('Sukces', 'Urządzenie zostało przywrócone do statusu "Dostępne"');
         }
-      ]
-    );
+        loadData();
+      } catch (error: any) {
+        if (Platform.OS === 'web') {
+          window.alert('Błąd: ' + error.message);
+        } else {
+          Alert.alert('Błąd', error.message);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirmRestore()) {
+        await performRestore();
+      }
+    } else {
+      Alert.alert(
+        'Przywróć urządzenie',
+        `Czy na pewno chcesz przywrócić urządzenie "${device.numer_seryjny}" do statusu "Dostępne"?`,
+        [
+          { text: 'Anuluj', style: 'cancel' },
+          { text: 'Przywróć', onPress: performRestore }
+        ]
+      );
+    }
   };
 
   const activeFiltersCount = (workerFilter ? 1 : 0) + (nameFilter ? 1 : 0);
