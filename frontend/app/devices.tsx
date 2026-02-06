@@ -879,6 +879,50 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
+  deviceItemInstalled: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#f59e0b',
+  },
+  installationInfo: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#2a2a2a',
+  },
+  installationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+    gap: 6,
+  },
+  installationAddress: {
+    color: '#f59e0b',
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
+  },
+  installationDate: {
+    color: '#888',
+    fontSize: 12,
+  },
+  installationWorker: {
+    color: '#10b981',
+    fontSize: 12,
+  },
+  installationTypeBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  installationTypeText: {
+    color: '#f59e0b',
+    fontSize: 11,
+    fontWeight: '500',
+  },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 60,
