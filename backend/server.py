@@ -504,8 +504,8 @@ async def send_message(request: Request, user: User = Depends(require_user)):
         "created_at": datetime.now(timezone.utc)
     }
     
-    await db.messages.insert_one(message)
-    return message
+    result = await db.messages.insert_one(message)
+    return {k: v for k, v in message.items() if k != "_id"}
 
 @api_router.get("/messages")
 async def get_messages(
