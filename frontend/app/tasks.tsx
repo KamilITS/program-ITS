@@ -55,6 +55,10 @@ export default function Tasks() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date(addDays(new Date(), 1)));
   const [selectedTime, setSelectedTime] = useState('09:00');
+  const [reminders, setReminders] = useState<any[]>([]);
+  const [photosModalVisible, setPhotosModalVisible] = useState(false);
+  const [viewingPhotos, setViewingPhotos] = useState<string[]>([]);
+  const [viewingTaskTitle, setViewingTaskTitle] = useState('');
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -89,15 +93,44 @@ export default function Tasks() {
     }
   };
 
+  const checkReminders = async () => {
+    try {
+      const data = await apiFetch('/api/tasks/reminders/check');
+      setReminders(data.reminders || []);
+      
+      // Show alert for new reminders
+      if (data.reminders && data.reminders.length > 0) {
+        const urgentTask = data.reminders[0];
+        if (Platform.OS === 'web') {
+          // Don't spam alerts, just update UI
+        } else {
+          Alert.alert(
+            '⚠️ Przypomnienie',
+            `Zadanie "${urgentTask.title}" kończy się za ${urgentTask.minutes_left} minut!`,
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error checking reminders:', error);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       loadData();
+      checkReminders();
+      
+      // Check reminders every 5 minutes
+      const interval = setInterval(checkReminders, 5 * 60 * 1000);
+      return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
+    await checkReminders();
     setRefreshing(false);
   };
 
