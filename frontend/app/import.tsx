@@ -31,6 +31,43 @@ export default function Import() {
 
   const handleFilePick = async () => {
     try {
+      // For web platform, use native file input for better compatibility
+      if (Platform.OS === 'web') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
+        
+        input.onchange = async (e: any) => {
+          const selectedFile = e.target.files?.[0];
+          if (!selectedFile) return;
+          
+          setUploading(true);
+          setResult(null);
+          
+          try {
+            const uploadResult = await uploadFileWeb('/api/devices/import', selectedFile);
+            setResult(uploadResult);
+            
+            if (uploadResult.imported > 0) {
+              Alert.alert(
+                'Sukces',
+                `Zaimportowano ${uploadResult.imported} urządzeń${uploadResult.errors.length > 0 ? ` (${uploadResult.errors.length} błędów)` : ''}`
+              );
+            } else if (uploadResult.errors.length > 0) {
+              Alert.alert('Uwaga', 'Nie zaimportowano żadnych urządzeń. Sprawdź błędy poniżej.');
+            }
+          } catch (error: any) {
+            Alert.alert('Błąd', error.message || 'Nie udało się zaimportować pliku');
+          } finally {
+            setUploading(false);
+          }
+        };
+        
+        input.click();
+        return;
+      }
+      
+      // For mobile platforms, use DocumentPicker
       const result = await DocumentPicker.getDocumentAsync({
         type: [
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -47,23 +84,6 @@ export default function Import() {
       
       setUploading(true);
       setResult(null);
-      
-      // Create form data for upload
-      const formData = new FormData();
-      
-      if (Platform.OS === 'web') {
-        // For web, fetch the file and create a blob
-        const response = await fetch(file.uri);
-        const blob = await response.blob();
-        formData.append('file', blob, file.name);
-      } else {
-        // For mobile
-        formData.append('file', {
-          uri: file.uri,
-          name: file.name,
-          type: file.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        } as any);
-      }
 
       const uploadResult = await uploadFile('/api/devices/import', {
         uri: file.uri,
