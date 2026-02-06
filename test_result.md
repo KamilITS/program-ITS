@@ -325,10 +325,38 @@ metadata:
   test_sequence: 2
   run_ui: false
 
+  - task: "Admin Inventory API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Dodano GET /api/devices/inventory/summary i GET /api/devices/inventory/{user_id} dla adminów"
+      - working: true
+        agent: "testing"
+        comment: "✅ Nowe endpointy inventory działają poprawnie. GET /api/devices/inventory/summary zwraca listę użytkowników z ich stanami magazynowymi (total_devices, by_barcode, low_stock, has_low_stock). GET /api/devices/inventory/{user_id} zwraca szczegółowy widok dla konkretnego użytkownika z podziałem na dostępne/zainstalowane urządzenia. Wszystkie wymagane pola obecne, logika low_stock (<4 szt) działa poprawnie."
+
+  - task: "Installation Recording API (updated with address)"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Zaktualizowano POST /api/installations - teraz wymaga adres_klienta (obowiązkowe) i przypisuje urządzenie po instalacji do admina ze statusem 'zainstalowany'"
+      - working: true
+        agent: "testing"
+        comment: "✅ Zaktualizowany endpoint instalacji działa poprawnie. POST /api/installations poprawnie odrzuca żądania bez adres_klienta (błąd 400: 'Wymagany adres klienta'), akceptuje żądania z prawidłowym adresem. Po instalacji urządzenie zmienia status na 'zainstalowany' i jest przypisywane do konta admina. Walidacja adresu działa dla pustych stringów i brakujących pól."
+
 test_plan:
-  current_focus:
-    - "Admin Inventory API"
-    - "Installation Recording API (updated with address)"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -340,3 +368,5 @@ agent_communication:
     message: "✅ Backend testing completed successfully! All 24 tests passed (100% success rate). Fixed ObjectId serialization issues in POST endpoints for installations, messages, and tasks. All core functionality working: health checks, authentication, device management, installation recording, chat messages, task management, and user management. Authentication properly enforced on protected endpoints."
   - agent: "main"
     message: "Dodano nowe endpointy: 1) GET /api/devices/inventory/summary - podsumowanie stanów magazynowych dla admina z alertami niskiego stanu (<4 szt), 2) GET /api/devices/inventory/{user_id} - szczegółowy widok dla konkretnego użytkownika, 3) POST /api/installations teraz wymaga adres_klienta i przypisuje urządzenie po instalacji do konta admina ze statusem 'zainstalowany'. Proszę przetestować te endpointy."
+  - agent: "testing"
+    message: "✅ Nowe endpointy inventory przetestowane pomyślnie! Wszystkie 5 testów przeszły (100% sukces). GET /api/devices/inventory/summary zwraca poprawną strukturę danych z alertami niskiego stanu (<4 szt). GET /api/devices/inventory/{user_id} dostarcza szczegółowy widok użytkownika. POST /api/installations poprawnie wymaga adres_klienta - odrzuca żądania bez adresu (400) i akceptuje z prawidłowym adresem. Po instalacji urządzenie zmienia status na 'zainstalowany' i jest przypisywane do admina. Logowanie admina działa z podanymi danymi (kamil@magazyn.its.kielce.pl / kamil678@)."
