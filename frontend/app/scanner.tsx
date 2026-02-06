@@ -39,6 +39,7 @@ export default function Scanner() {
   const [address, setAddress] = useState('');
   const [orderType, setOrderType] = useState<string>('instalacja');
   const [showCamera, setShowCamera] = useState(false);
+  const [lastScannedCode, setLastScannedCode] = useState('');
 
   const orderTypes = ['instalacja', 'wymiana', 'awaria', 'uszkodzony'];
 
@@ -55,14 +56,14 @@ export default function Scanner() {
       
       const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
       if (locationStatus === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({});
-        setLocation({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        });
-        
-        // Reverse geocode
         try {
+          const loc = await Location.getCurrentPositionAsync({});
+          setLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+          
+          // Reverse geocode
           const [addr] = await Location.reverseGeocodeAsync({
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
@@ -71,16 +72,61 @@ export default function Scanner() {
             setAddress(`${addr.street || ''} ${addr.streetNumber || ''}, ${addr.city || ''}`);
           }
         } catch (error) {
-          console.error('Geocoding error:', error);
+          console.error('Location error:', error);
         }
       }
     })();
   }, []);
 
+  // Parse scanned data - extract serial number from various formats
+  const parseScannedData = (rawData: string): string => {
+    // Remove whitespace and normalize
+    let data = rawData.trim();
+    
+    // If it contains newlines or carriage returns, try to extract serial number
+    if (data.includes('\n') || data.includes('\r')) {
+      const lines = data.split(/[\r\n]+/).filter(line => line.trim());
+      
+      // Look for serial number patterns
+      for (const line of lines) {
+        // Pattern: starts with S, SN, or contains serial indicators
+        if (line.match(/^S[N]?[0-9A-Z]/i) || line.match(/^[0-9]{2}S[A-Z0-9]/i)) {
+          return line.trim();
+        }
+        // Pattern: 20SM... format (common serial number format)
+        if (line.match(/^20S[A-Z]/i)) {
+          return line.trim();
+        }
+      }
+      
+      // If no specific pattern found, return the longest alphanumeric line
+      const sortedLines = lines.sort((a, b) => b.length - a.length);
+      for (const line of sortedLines) {
+        if (line.match(/^[A-Z0-9]+$/i) && line.length >= 6) {
+          return line.trim();
+        }
+      }
+      
+      // Return first meaningful line
+      return lines[0]?.trim() || data;
+    }
+    
+    return data;
+  };
+
   const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
+    // Prevent duplicate scans
+    if (scanned || data === lastScannedCode) return;
+    
+    const parsedCode = parseScannedData(data);
+    setLastScannedCode(data);
     setScanned(true);
     setShowCamera(false);
-    await searchDevice(data);
+    
+    console.log('Scanned raw:', data);
+    console.log('Parsed code:', parsedCode);
+    
+    await searchDevice(parsedCode);
   };
 
   const searchDevice = async (code: string) => {
@@ -89,13 +135,40 @@ export default function Scanner() {
       return;
     }
     
+    // Clean the code
+    const cleanCode = code.trim().replace(/[\r\n]/g, '');
+    
     setIsSearching(true);
     try {
-      const foundDevice = await apiFetch(`/api/devices/scan/${encodeURIComponent(code)}`);
+      const foundDevice = await apiFetch(`/api/devices/scan/${encodeURIComponent(cleanCode)}`);
       setDevice(foundDevice);
+      setManualCode(cleanCode);
     } catch (error: any) {
-      Alert.alert('Nie znaleziono', 'Urządzenie o podanym kodzie nie istnieje w systemie');
-      setDevice(null);
+      // Try searching by parts if full code fails
+      const parts = code.split(/[\r\n\s]+/).filter(p => p.trim());
+      let found = false;
+      
+      for (const part of parts) {
+        if (part.length >= 4) {
+          try {
+            const foundDevice = await apiFetch(`/api/devices/scan/${encodeURIComponent(part.trim())}`);
+            setDevice(foundDevice);
+            setManualCode(part.trim());
+            found = true;
+            break;
+          } catch (e) {
+            // Continue trying other parts
+          }
+        }
+      }
+      
+      if (!found) {
+        Alert.alert(
+          'Nie znaleziono',
+          `Urządzenie o kodzie "${cleanCode}" nie istnieje w systemie.\n\nSprawdź czy numer seryjny jest poprawny lub dodaj urządzenie przez import.`
+        );
+        setDevice(null);
+      }
     } finally {
       setIsSearching(false);
     }
@@ -124,6 +197,7 @@ export default function Scanner() {
           setDevice(null);
           setScanned(false);
           setManualCode('');
+          setLastScannedCode('');
         }}]
       );
     } catch (error: any) {
@@ -131,6 +205,13 @@ export default function Scanner() {
     } finally {
       setIsInstalling(false);
     }
+  };
+
+  const resetScanner = () => {
+    setScanned(false);
+    setDevice(null);
+    setManualCode('');
+    setLastScannedCode('');
   };
 
   if (isLoading) {
@@ -148,7 +229,9 @@ export default function Scanner() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.title}>Skanuj urządzenie</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={resetScanner} style={styles.resetButton}>
+          <Ionicons name="refresh" size={24} color="#3b82f6" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
@@ -159,21 +242,28 @@ export default function Scanner() {
               style={styles.camera}
               onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
               barcodeScannerSettings={{
-                barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39'],
+                barcodeTypes: ['qr', 'ean13', 'ean8', 'code128', 'code39', 'code93', 'codabar', 'itf14', 'upc_a', 'upc_e', 'pdf417', 'aztec', 'datamatrix'],
               }}
             />
+            <View style={styles.scanOverlay}>
+              <View style={styles.scanFrame} />
+            </View>
             <TouchableOpacity
               style={styles.closeCameraButton}
               onPress={() => setShowCamera(false)}
             >
               <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
+            <View style={styles.scanHint}>
+              <Text style={styles.scanHintText}>Skieruj kamerę na kod QR lub kreskowy</Text>
+            </View>
           </View>
         ) : (
           <TouchableOpacity
             style={styles.scanButton}
             onPress={() => {
               setScanned(false);
+              setLastScannedCode('');
               setShowCamera(true);
             }}
             disabled={!hasPermission}
@@ -184,19 +274,23 @@ export default function Scanner() {
                 ? 'Brak dostępu do kamery'
                 : 'Dotknij aby skanować'}
             </Text>
+            <Text style={styles.scanButtonSubtext}>
+              Skanuj kod QR lub kreskowy urządzenia
+            </Text>
           </TouchableOpacity>
         )}
 
         {/* Manual Input */}
         <View style={styles.manualSection}>
-          <Text style={styles.sectionTitle}>Lub wpisz kod ręcznie</Text>
+          <Text style={styles.sectionTitle}>Lub wpisz numer seryjny ręcznie</Text>
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
-              placeholder="Numer seryjny lub kod"
+              placeholder="Numer seryjny urządzenia"
               placeholderTextColor="#666"
               value={manualCode}
               onChangeText={setManualCode}
+              autoCapitalize="characters"
             />
             <TouchableOpacity
               style={styles.searchButton}
@@ -219,7 +313,13 @@ export default function Scanner() {
             <View style={styles.deviceCard}>
               <View style={styles.deviceInfo}>
                 <Text style={styles.deviceName}>{device.nazwa}</Text>
-                <Text style={styles.deviceSerial}>S/N: {device.numer_seryjny}</Text>
+                <Text style={styles.deviceSerial}>Numer seryjny: {device.numer_seryjny}</Text>
+                {device.kod_kreskowy && (
+                  <Text style={styles.deviceCode}>Kod kreskowy: {device.kod_kreskowy}</Text>
+                )}
+                {device.kod_qr && (
+                  <Text style={styles.deviceCode}>Kod QR: {device.kod_qr}</Text>
+                )}
                 <View style={[
                   styles.statusBadge,
                   device.status === 'dostepny' && { backgroundColor: '#10b981' },
@@ -269,7 +369,7 @@ export default function Scanner() {
                 ) : (
                   <>
                     <Ionicons name="checkmark-circle" size={24} color="#fff" />
-                    <Text style={styles.installButtonText}>Zarejestruj</Text>
+                    <Text style={styles.installButtonText}>Zarejestruj {orderType}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -311,6 +411,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+  resetButton: {
+    padding: 8,
+  },
   content: {
     flex: 1,
     padding: 16,
@@ -324,6 +427,19 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
   },
+  scanOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scanFrame: {
+    width: 200,
+    height: 200,
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+  },
   closeCameraButton: {
     position: 'absolute',
     top: 16,
@@ -331,6 +447,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 20,
     padding: 8,
+  },
+  scanHint: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  scanHintText: {
+    color: '#fff',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    fontSize: 13,
   },
   scanButton: {
     height: 200,
@@ -343,9 +474,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scanButtonText: {
-    color: '#888',
+    color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
     marginTop: 12,
+  },
+  scanButtonSubtext: {
+    color: '#888',
+    fontSize: 13,
+    marginTop: 4,
   },
   manualSection: {
     marginTop: 24,
@@ -393,9 +530,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   deviceSerial: {
-    color: '#888',
+    color: '#3b82f6',
     fontSize: 14,
     marginTop: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  deviceCode: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 2,
   },
   statusBadge: {
     alignSelf: 'flex-start',
@@ -469,5 +612,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+    textTransform: 'capitalize',
   },
 });
