@@ -221,8 +221,38 @@ export default function Users() {
     );
   };
 
+  const parseDeviceName = (userAgent: string): string => {
+    if (!userAgent || userAgent === 'nieznany') return 'Nieznane urządzenie';
+    
+    // Check for mobile devices
+    if (/iPhone/i.test(userAgent)) return 'iPhone';
+    if (/iPad/i.test(userAgent)) return 'iPad';
+    if (/Android/i.test(userAgent)) {
+      if (/Mobile/i.test(userAgent)) return 'Android (telefon)';
+      return 'Android (tablet)';
+    }
+    
+    // Check for browsers on desktop
+    if (/Windows/i.test(userAgent)) {
+      if (/Edge/i.test(userAgent)) return 'Windows (Edge)';
+      if (/Chrome/i.test(userAgent)) return 'Windows (Chrome)';
+      if (/Firefox/i.test(userAgent)) return 'Windows (Firefox)';
+      return 'Windows';
+    }
+    if (/Macintosh/i.test(userAgent)) {
+      if (/Safari/i.test(userAgent) && !/Chrome/i.test(userAgent)) return 'Mac (Safari)';
+      if (/Chrome/i.test(userAgent)) return 'Mac (Chrome)';
+      return 'Mac';
+    }
+    if (/Linux/i.test(userAgent)) return 'Linux';
+    
+    return 'Przeglądarka';
+  };
+
   const renderUser = ({ item }: { item: User }) => {
     const isCurrentUser = item.user_id === user?.user_id;
+    const lastLoginDate = item.last_login_at ? new Date(item.last_login_at) : null;
+    const deviceName = parseDeviceName(item.last_login_device || '');
     
     return (
       <View style={styles.userCard}>
@@ -262,6 +292,33 @@ export default function Users() {
               <Ionicons name="chevron-down" size={14} color="#fff" style={{ marginLeft: 4 }} />
             )}
           </TouchableOpacity>
+        </View>
+        
+        {/* Last Login Info */}
+        <View style={styles.loginInfoSection}>
+          <Text style={styles.loginInfoTitle}>Ostatnie logowanie</Text>
+          {lastLoginDate ? (
+            <View style={styles.loginInfoGrid}>
+              <View style={styles.loginInfoItem}>
+                <Ionicons name="time-outline" size={16} color="#3b82f6" />
+                <Text style={styles.loginInfoText}>
+                  {format(lastLoginDate, 'd MMM yyyy, HH:mm', { locale: pl })}
+                </Text>
+              </View>
+              {item.last_login_ip && (
+                <View style={styles.loginInfoItem}>
+                  <Ionicons name="globe-outline" size={16} color="#10b981" />
+                  <Text style={styles.loginInfoText}>{item.last_login_ip}</Text>
+                </View>
+              )}
+              <View style={styles.loginInfoItem}>
+                <Ionicons name="phone-portrait-outline" size={16} color="#f59e0b" />
+                <Text style={styles.loginInfoText}>{deviceName}</Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.noLoginText}>Jeszcze się nie logował</Text>
+          )}
         </View>
         
         {!isCurrentUser && (
