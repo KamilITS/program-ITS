@@ -52,6 +52,9 @@ export default function Tasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [completionPhotos, setCompletionPhotos] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date(addDays(new Date(), 1)));
+  const [selectedTime, setSelectedTime] = useState('09:00');
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -59,6 +62,11 @@ export default function Tasks() {
     due_date: format(addDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
     priority: 'normalne',
   });
+
+  const suggestedTimes = [
+    '08:00', '09:00', '10:00', '11:00', '12:00', 
+    '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
+  ];
 
   const isAdmin = user?.role === 'admin';
 
