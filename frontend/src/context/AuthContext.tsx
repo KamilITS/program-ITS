@@ -1,8 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-import { Platform } from 'react-native';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
@@ -10,7 +7,6 @@ interface User {
   user_id: string;
   email: string;
   name: string;
-  picture?: string;
   role: string;
 }
 
@@ -18,7 +14,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: () => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -52,129 +49,93 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Auth check failed:', error);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const processSessionId = async (sessionId: string) => {
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_URL}/api/auth/session`, {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ session_id: sessionId }),
+        body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
         await AsyncStorage.setItem('session_token', data.session_token);
         setUser({
           user_id: data.user_id,
           email: data.email,
           name: data.name,
-          picture: data.picture,
           role: data.role,
         });
+        return { success: true };
+      } else {
+        return { success: false, error: data.detail || 'Błąd logowania' };
       }
     } catch (error) {
-      console.error('Session exchange failed:', error);
+      console.error('Login failed:', error);
+      return { success: false, error: 'Błąd połączenia z serwerem' };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUrl = async (url: string) => {
-    const sessionIdMatch = url.match(/[#?]session_id=([^&]+)/);
-    if (sessionIdMatch) {
-      await processSessionId(sessionIdMatch[1]);
-    }
-  };
-
-  useEffect(() => {
-    // Check initial URL on mount (cold start)
-    const checkInitialUrl = async () => {
-      try {
-        // For web, check window.location.hash
-        if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          const hash = window.location.hash;
-          const search = window.location.search;
-          
-          // Check both hash and query params for session_id
-          let sessionId = null;
-          if (hash && hash.includes('session_id=')) {
-            sessionId = hash.match(/session_id=([^&]+)/)?.[1];
-          } else if (search && search.includes('session_id=')) {
-            sessionId = search.match(/session_id=([^&]+)/)?.[1];
-          }
-          
-          if (sessionId) {
-            await processSessionId(sessionId);
-            // Clean URL
-            window.history.replaceState(null, '', window.location.pathname);
-            return;
-          }
-          
-          // No session_id, check existing auth
-          await checkAuth();
-          return;
-        }
-
-        // For mobile, check Linking
-        const initialUrl = await Linking.getInitialURL();
-        if (initialUrl) {
-          await handleUrl(initialUrl);
-        } else {
-          await checkAuth();
-        }
-      } catch (error) {
-        console.error('Error checking initial URL:', error);
-        setIsLoading(false);
-      }
-    };
-
-    checkInitialUrl();
-
-    // Listen for URL changes (mobile only)
-    if (Platform.OS !== 'web') {
-      const subscription = Linking.addEventListener('url', (event) => {
-        handleUrl(event.url);
+  const register = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, name }),
       });
 
-      return () => {
-        subscription.remove();
-      };
-    }
-  }, []);
+      const data = await response.json();
 
-  const login = async () => {
-    const redirectUrl = Platform.OS === 'web'
-      ? `${API_URL}/`
-      : Linking.createURL('/');
-
-    const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-
-    if (Platform.OS === 'web') {
-      window.location.href = authUrl;
-    } else {
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
-      if (result.type === 'success' && result.url) {
-        await handleUrl(result.url);
+      if (response.ok) {
+        await AsyncStorage.setItem('session_token', data.session_token);
+        setUser({
+          user_id: data.user_id,
+          email: data.email,
+          name: data.name,
+          role: data.role,
+        });
+        return { success: true };
+      } else {
+        return { success: false, error: data.detail || 'Błąd rejestracji' };
       }
+    } catch (error) {
+      console.error('Register failed:', error);
+      return { success: false, error: 'Błąd połączenia z serwerem' };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = async () => {
     try {
       const token = await AsyncStorage.getItem('session_token');
-      await fetch(`${API_URL}/api/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      if (token) {
+        await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      }
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
@@ -193,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated: !!user,
       login,
+      register,
       logout,
       refreshUser,
     }}>
