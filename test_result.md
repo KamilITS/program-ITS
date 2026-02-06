@@ -101,3 +101,218 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Aplikacja mobilna Magazyn ITS Kielce - zarządzanie magazynem i pracownikami z importem XLSX, skanowaniem kodów, czatem grupowym, planerem zadań i statystykami"
+
+backend:
+  - task: "API Health Check"
+    implemented: true
+    working: NA
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Podstawowe API endpoints utworzone"
+
+  - task: "Google Auth (Emergent)"
+    implemented: true
+    working: NA
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Emergent Auth session exchange implemented"
+
+  - task: "User Management API"
+    implemented: true
+    working: NA
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "GET /users, PUT /users/{id}/role endpoints"
+
+  - task: "Device Management API"
+    implemented: true
+    working: NA
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "CRUD + import XLSX + scan endpoints"
+
+  - task: "Installation Recording API"
+    implemented: true
+    working: NA
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "POST /installations, GET /installations, stats"
+
+  - task: "Chat Messages API"
+    implemented: true
+    working: NA
+    file: "server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "POST/GET messages with attachments"
+
+  - task: "Tasks/Planner API"
+    implemented: true
+    working: NA
+    file: "server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "CRUD for tasks with assignment"
+
+frontend:
+  - task: "Login Screen with Google Auth"
+    implemented: true
+    working: NA
+    file: "app/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Emergent Google Auth implemented"
+
+  - task: "Dashboard with Stats"
+    implemented: true
+    working: NA
+    file: "app/dashboard.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Main dashboard with quick actions"
+
+  - task: "Scanner Screen"
+    implemented: true
+    working: NA
+    file: "app/scanner.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "QR/Barcode scanner with location"
+
+  - task: "Devices List"
+    implemented: true
+    working: NA
+    file: "app/devices.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Devices list with filters and assignment"
+
+  - task: "Chat Screen"
+    implemented: true
+    working: NA
+    file: "app/chat.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Group chat with image attachments"
+
+  - task: "Tasks/Planner Screen"
+    implemented: true
+    working: NA
+    file: "app/tasks.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Task management with priorities"
+
+  - task: "Users Management (Admin)"
+    implemented: true
+    working: NA
+    file: "app/users.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "User role management for admin"
+
+  - task: "Import Devices (Admin)"
+    implemented: true
+    working: NA
+    file: "app/import.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "XLSX file upload for devices"
+
+  - task: "Statistics Screen"
+    implemented: true
+    working: NA
+    file: "app/stats.tsx"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Stats with charts and filters"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "API Health Check"
+    - "Device Management API"
+    - "Installation Recording API"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "MVP aplikacji magazynowej zaimplementowany. Backend z FastAPI + MongoDB, Frontend z Expo React Native. Główne funkcje: auth Google, zarządzanie urządzeniami, skanowanie kodów, czat, zadania, statystyki. Proszę przetestować backend API."
