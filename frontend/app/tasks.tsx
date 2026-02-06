@@ -273,10 +273,15 @@ export default function Tasks() {
               styles.statusCheckbox,
               item.status === 'zakonczone' && styles.statusCheckboxCompleted,
             ]}
-            onPress={() => handleUpdateStatus(
-              item.task_id,
-              item.status === 'zakonczone' ? 'oczekujace' : 'zakonczone'
-            )}
+            onPress={() => {
+              if (item.status === 'zakonczone') {
+                // Reopen task
+                handleUpdateStatus(item.task_id, 'oczekujace');
+              } else {
+                // Open complete modal with photo requirement
+                openCompleteModal(item);
+              }
+            }}
           >
             {item.status === 'zakonczone' && (
               <Ionicons name="checkmark" size={16} color="#fff" />
@@ -335,6 +340,13 @@ export default function Tasks() {
               <Text style={styles.assignedText}>{assignedWorker.name}</Text>
             </View>
           )}
+          
+          {item.completion_photos && item.completion_photos.length > 0 && (
+            <View style={styles.photosBadge}>
+              <Ionicons name="camera" size={14} color="#10b981" />
+              <Text style={styles.photosText}>{item.completion_photos.length} zdjęć</Text>
+            </View>
+          )}
         </View>
 
         {item.status !== 'zakonczone' && (
@@ -356,6 +368,13 @@ export default function Tasks() {
               onPress={() => handleUpdateStatus(item.task_id, 'w_trakcie')}
             >
               <Text style={styles.statusButtonText}>W trakcie</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.completeButton}
+              onPress={() => openCompleteModal(item)}
+            >
+              <Ionicons name="checkmark-circle" size={16} color="#fff" />
+              <Text style={styles.completeButtonText}>Zakończ</Text>
             </TouchableOpacity>
           </View>
         )}
