@@ -226,6 +226,38 @@ export default function Devices() {
     setSelectedDevices(new Set());
   };
 
+  const clearFilters = () => {
+    setWorkerFilter(null);
+    setNameFilter(null);
+    setShowFiltersModal(false);
+  };
+
+  const handleRestoreDevice = async (device: Device) => {
+    Alert.alert(
+      'Przywróć urządzenie',
+      `Czy na pewno chcesz przywrócić urządzenie "${device.numer_seryjny}" do statusu "Dostępne"?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Przywróć',
+          onPress: async () => {
+            try {
+              await apiFetch(`/api/devices/${device.device_id}/restore`, {
+                method: 'POST',
+              });
+              Alert.alert('Sukces', 'Urządzenie zostało przywrócone do statusu "Dostępne"');
+              loadData();
+            } catch (error: any) {
+              Alert.alert('Błąd', error.message);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const activeFiltersCount = (workerFilter ? 1 : 0) + (nameFilter ? 1 : 0);
+
   const statusFilters = [
     { key: null, label: 'Wszystkie' },
     { key: 'dostepny', label: 'Dostępne' },
