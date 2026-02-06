@@ -104,6 +104,39 @@ class Task(BaseModel):
     priority: str = "normalne"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class BackupSettings(BaseModel):
+    # Email settings
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_use_tls: bool = True
+    email_recipient: Optional[str] = None
+    email_enabled: bool = False
+    
+    # FTP settings
+    ftp_host: Optional[str] = None
+    ftp_port: Optional[int] = 21
+    ftp_user: Optional[str] = None
+    ftp_password: Optional[str] = None
+    ftp_path: Optional[str] = "/backups/"
+    ftp_enabled: bool = False
+    
+    # Schedule settings
+    schedule_enabled: bool = False
+    schedule_time: str = "02:00"  # HH:MM format
+    
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BackupLog(BaseModel):
+    backup_id: str = Field(default_factory=lambda: f"backup_{uuid.uuid4().hex[:12]}")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    size_bytes: int
+    status: str  # "success", "failed"
+    sent_email: bool = False
+    sent_ftp: bool = False
+    error_message: Optional[str] = None
+
 # ==================== AUTH HELPERS ====================
 
 async def get_session_token(request: Request) -> Optional[str]:
