@@ -1447,10 +1447,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 8,
   },
+  urgentBannerText: {
+    color: '#ef4444',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   urgentText: {
     color: '#ef4444',
     fontSize: 12,
     fontWeight: '600',
+  },
+  urgentBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
   },
   fullPhotoContainer: {
     width: '100%',
