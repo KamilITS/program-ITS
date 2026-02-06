@@ -420,15 +420,105 @@ async def get_devices(
     assigned_to: Optional[str] = None,
     user: dict = Depends(require_user)
 ):
-    """Get all devices"""
+    """Get all devices - workers can only see their own devices"""
     query = {}
     if status:
         query["status"] = status
-    if assigned_to:
+    
+    # Workers can only see devices assigned to them
+    if user.get("role") != "admin":
+        query["przypisany_do"] = user["user_id"]
+    elif assigned_to:
         query["przypisany_do"] = assigned_to
     
     devices = await db.devices.find(query, {"_id": 0}).to_list(1000)
     return devices
+
+@api_router.get("/devices/inventory/summary")
+async def get_inventory_summary(admin: dict = Depends(require_admin)):
+    """Get inventory summary for all users (admin only)"""
+    # Get all users
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    
+    inventory = []
+    for usr in users:
+        # Get devices assigned to this user
+        devices = await db.devices.find(
+            {"przypisany_do": usr["user_id"], "status": {"$ne": "zainstalowany"}},
+            {"_id": 0}
+        ).to_list(1000)
+        
+        # Count by barcode
+        barcode_counts = {}
+        for device in devices:
+            barcode = device.get("kod_kreskowy") or device.get("nazwa") or "brak_kodu"
+            if barcode not in barcode_counts:
+                barcode_counts[barcode] = {
+                    "kod_kreskowy": barcode,
+                    "nazwa": device.get("nazwa", ""),
+                    "count": 0,
+                    "devices": []
+                }
+            barcode_counts[barcode]["count"] += 1
+            barcode_counts[barcode]["devices"].append(device)
+        
+        # Check for low stock (less than 4 of same barcode)
+        low_stock_items = [
+            item for item in barcode_counts.values() 
+            if item["count"] < 4
+        ]
+        
+        inventory.append({
+            "user_id": usr["user_id"],
+            "user_name": usr["name"],
+            "user_email": usr["email"],
+            "role": usr["role"],
+            "total_devices": len(devices),
+            "by_barcode": list(barcode_counts.values()),
+            "low_stock": low_stock_items,
+            "has_low_stock": len(low_stock_items) > 0
+        })
+    
+    return inventory
+
+@api_router.get("/devices/inventory/{user_id}")
+async def get_user_inventory(user_id: str, admin: dict = Depends(require_admin)):
+    """Get detailed inventory for a specific user (admin only)"""
+    target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Nie znaleziono użytkownika")
+    
+    devices = await db.devices.find(
+        {"przypisany_do": user_id},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Separate by status
+    available = [d for d in devices if d.get("status") == "przypisany"]
+    installed = [d for d in devices if d.get("status") == "zainstalowany"]
+    
+    # Count by barcode for available devices
+    barcode_counts = {}
+    for device in available:
+        barcode = device.get("kod_kreskowy") or device.get("nazwa") or "brak_kodu"
+        if barcode not in barcode_counts:
+            barcode_counts[barcode] = {
+                "kod_kreskowy": barcode,
+                "nazwa": device.get("nazwa", ""),
+                "count": 0,
+                "devices": []
+            }
+        barcode_counts[barcode]["count"] += 1
+        barcode_counts[barcode]["devices"].append(device)
+    
+    return {
+        "user": target_user,
+        "total_available": len(available),
+        "total_installed": len(installed),
+        "available_devices": available,
+        "installed_devices": installed,
+        "by_barcode": list(barcode_counts.values())
+    }
 
 @api_router.get("/devices/{device_id}")
 async def get_device(device_id: str, user: dict = Depends(require_user)):
@@ -440,7 +530,7 @@ async def get_device(device_id: str, user: dict = Depends(require_user)):
 
 @api_router.post("/devices/{device_id}/assign")
 async def assign_device(device_id: str, request: Request, admin: dict = Depends(require_admin)):
-    """Assign device to worker"""
+    """Assign device to worker (admin only)"""
     body = await request.json()
     worker_id = body.get("worker_id")
     
@@ -456,6 +546,26 @@ async def assign_device(device_id: str, request: Request, admin: dict = Depends(
         raise HTTPException(status_code=404, detail="Nie znaleziono urządzenia")
     
     return {"message": "Urządzenie przypisane"}
+
+@api_router.post("/devices/assign-multiple")
+async def assign_multiple_devices(request: Request, admin: dict = Depends(require_admin)):
+    """Assign multiple devices to a worker (admin only)"""
+    body = await request.json()
+    device_ids = body.get("device_ids", [])
+    worker_id = body.get("worker_id")
+    
+    if not worker_id:
+        raise HTTPException(status_code=400, detail="Wymagane worker_id")
+    
+    if not device_ids:
+        raise HTTPException(status_code=400, detail="Wymagana lista device_ids")
+    
+    result = await db.devices.update_many(
+        {"device_id": {"$in": device_ids}},
+        {"$set": {"przypisany_do": worker_id, "status": "przypisany"}}
+    )
+    
+    return {"message": f"Przypisano {result.modified_count} urządzeń"}
 
 @api_router.get("/devices/scan/{code}")
 async def scan_device(code: str, user: dict = Depends(require_user)):
