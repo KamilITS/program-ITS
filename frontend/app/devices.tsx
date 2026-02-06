@@ -52,6 +52,9 @@ export default function Devices() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [workerFilter, setWorkerFilter] = useState<string | null>(null);
+  const [nameFilter, setNameFilter] = useState<string | null>(null);
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
   
   // Single device assign modal
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
@@ -96,6 +99,12 @@ export default function Devices() {
     setRefreshing(false);
   };
 
+  // Get unique device names for filter
+  const deviceNames = useMemo(() => {
+    const names = new Set(devices.map(d => d.nazwa));
+    return Array.from(names).sort();
+  }, [devices]);
+
   // Group devices by name (category)
   const categorizedDevices = useMemo(() => {
     const filtered = devices.filter((device) => {
@@ -103,7 +112,9 @@ export default function Devices() {
         device.nazwa.toLowerCase().includes(searchQuery.toLowerCase()) ||
         device.numer_seryjny.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = !statusFilter || device.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesWorker = !workerFilter || device.przypisany_do === workerFilter;
+      const matchesName = !nameFilter || device.nazwa === nameFilter;
+      return matchesSearch && matchesStatus && matchesWorker && matchesName;
     });
 
     const categoryMap = new Map<string, Device[]>();
@@ -127,7 +138,7 @@ export default function Devices() {
       }));
 
     return sortedCategories;
-  }, [devices, searchQuery, statusFilter]);
+  }, [devices, searchQuery, statusFilter, workerFilter, nameFilter]);
 
   const toggleCategory = (categoryName: string) => {
     setExpandedCategories((prev) => {
