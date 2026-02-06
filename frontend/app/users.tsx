@@ -23,6 +23,9 @@ interface User {
   name: string;
   role: string;
   created_at: string;
+  last_login_at?: string;
+  last_login_ip?: string;
+  last_login_device?: string;
 }
 
 export default function Users() {
