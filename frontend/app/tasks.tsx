@@ -11,6 +11,8 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -19,6 +21,7 @@ import { apiFetch } from '../src/utils/api';
 import { Ionicons } from '@expo/vector-icons';
 import { format, addDays, isBefore, isToday, isTomorrow } from 'date-fns';
 import { pl } from 'date-fns/locale';
+import * as ImagePicker from 'expo-image-picker';
 
 interface Task {
   task_id: string;
@@ -29,6 +32,7 @@ interface Task {
   due_date: string;
   status: string;
   priority: string;
+  completion_photos?: string[];
 }
 
 interface Worker {
@@ -44,6 +48,10 @@ export default function Tasks() {
   const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [completeModalVisible, setCompleteModalVisible] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [completionPhotos, setCompletionPhotos] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
