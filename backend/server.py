@@ -6,7 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -49,28 +49,19 @@ def generate_token() -> str:
 
 # ==================== MODELS ====================
 
-class User(BaseModel):
-    user_id: str
-    email: str
-    name: str
-    password_hash: Optional[str] = None
-    role: str = "pracownik"  # admin lub pracownik
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class UserSession(BaseModel):
-    user_id: str
-    session_token: str
-    expires_at: datetime
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class RegisterRequest(BaseModel):
-    email: str
-    password: str
-    name: str
-
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+    role: str = "pracownik"
+
+class ChangePasswordRequest(BaseModel):
+    current_password: Optional[str] = None  # Required for self-change
+    new_password: str
 
 class Device(BaseModel):
     device_id: str = Field(default_factory=lambda: f"dev_{uuid.uuid4().hex[:12]}")
@@ -78,27 +69,27 @@ class Device(BaseModel):
     numer_seryjny: str
     kod_kreskowy: Optional[str] = None
     kod_qr: Optional[str] = None
-    przypisany_do: Optional[str] = None  # user_id pracownika
-    status: str = "dostepny"  # dostepny, przypisany, zainstalowany
+    przypisany_do: Optional[str] = None
+    status: str = "dostepny"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class DeviceInstallation(BaseModel):
     installation_id: str = Field(default_factory=lambda: f"inst_{uuid.uuid4().hex[:12]}")
     device_id: str
-    user_id: str  # kto zainstalował
+    user_id: str
     nazwa_urzadzenia: str
     data_instalacji: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     adres: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    rodzaj_zlecenia: str  # instalacja, wymiana, awaria, uszkodzony
+    rodzaj_zlecenia: str
 
 class Message(BaseModel):
     message_id: str = Field(default_factory=lambda: f"msg_{uuid.uuid4().hex[:12]}")
     sender_id: str
     sender_name: str
     content: Optional[str] = None
-    attachment: Optional[str] = None  # base64 image
+    attachment: Optional[str] = None
     attachment_type: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -106,11 +97,11 @@ class Task(BaseModel):
     task_id: str = Field(default_factory=lambda: f"task_{uuid.uuid4().hex[:12]}")
     title: str
     description: Optional[str] = None
-    assigned_to: str  # user_id
-    assigned_by: str  # user_id (admin)
+    assigned_to: str
+    assigned_by: str
     due_date: datetime
-    status: str = "oczekujace"  # oczekujace, w_trakcie, zakonczone
-    priority: str = "normalne"  # niskie, normalne, wysokie, pilne
+    status: str = "oczekujace"
+    priority: str = "normalne"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # ==================== AUTH HELPERS ====================
@@ -137,7 +128,6 @@ async def get_current_user(request: Request) -> Optional[dict]:
     if not session:
         return None
     
-    # Check expiry with timezone handling
     expires_at = session["expires_at"]
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
@@ -164,63 +154,27 @@ async def require_admin(request: Request) -> dict:
         raise HTTPException(status_code=403, detail="Brak uprawnień administratora")
     return user
 
-# ==================== AUTH ENDPOINTS ====================
+# ==================== STARTUP - CREATE ADMIN ====================
 
-@api_router.post("/auth/register")
-async def register(data: RegisterRequest, response: Response):
-    """Register a new user"""
-    # Check if email already exists
-    existing = await db.users.find_one({"email": data.email.lower()})
-    if existing:
-        raise HTTPException(status_code=400, detail="Email jest już zarejestrowany")
+@app.on_event("startup")
+async def create_default_admin():
+    """Create default admin account if not exists"""
+    admin_email = "kamil@magazyn.its.kielce.pl"
+    existing = await db.users.find_one({"email": admin_email})
     
-    # Check if this is the first user (make admin)
-    users_count = await db.users.count_documents({})
-    role = "admin" if users_count == 0 else "pracownik"
-    
-    user_id = f"user_{uuid.uuid4().hex[:12]}"
-    password_hash = hash_password(data.password)
-    
-    user_doc = {
-        "user_id": user_id,
-        "email": data.email.lower(),
-        "name": data.name,
-        "password_hash": password_hash,
-        "role": role,
-        "created_at": datetime.now(timezone.utc)
-    }
-    
-    await db.users.insert_one(user_doc)
-    
-    # Create session
-    session_token = generate_token()
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    
-    await db.user_sessions.insert_one({
-        "user_id": user_id,
-        "session_token": session_token,
-        "expires_at": expires_at,
-        "created_at": datetime.now(timezone.utc)
-    })
-    
-    # Set cookie
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
-    
-    return {
-        "user_id": user_id,
-        "email": data.email.lower(),
-        "name": data.name,
-        "role": role,
-        "session_token": session_token
-    }
+    if not existing:
+        admin_user = {
+            "user_id": f"user_{uuid.uuid4().hex[:12]}",
+            "email": admin_email,
+            "name": "Kamil",
+            "password_hash": hash_password("kamil678@"),
+            "role": "admin",
+            "created_at": datetime.now(timezone.utc)
+        }
+        await db.users.insert_one(admin_user)
+        logger.info(f"Created default admin account: {admin_email}")
+
+# ==================== AUTH ENDPOINTS ====================
 
 @api_router.post("/auth/login")
 async def login(data: LoginRequest, response: Response):
@@ -251,7 +205,6 @@ async def login(data: LoginRequest, response: Response):
         "created_at": datetime.now(timezone.utc)
     })
     
-    # Set cookie
     response.set_cookie(
         key="session_token",
         value=session_token,
@@ -285,13 +238,74 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(key="session_token", path="/")
     return {"message": "Wylogowano pomyślnie"}
 
-# ==================== USER MANAGEMENT ====================
+@api_router.post("/auth/change-password")
+async def change_own_password(request: Request, user: dict = Depends(require_user)):
+    """Change own password"""
+    body = await request.json()
+    current_password = body.get("current_password")
+    new_password = body.get("new_password")
+    
+    if not current_password or not new_password:
+        raise HTTPException(status_code=400, detail="Wymagane aktualne i nowe hasło")
+    
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Hasło musi mieć minimum 6 znaków")
+    
+    # Verify current password
+    user_doc = await db.users.find_one({"user_id": user["user_id"]})
+    if user_doc.get("password_hash") != hash_password(current_password):
+        raise HTTPException(status_code=401, detail="Nieprawidłowe aktualne hasło")
+    
+    # Update password
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"password_hash": hash_password(new_password)}}
+    )
+    
+    return {"message": "Hasło zostało zmienione"}
+
+# ==================== USER MANAGEMENT (ADMIN) ====================
 
 @api_router.get("/users")
 async def get_users(admin: dict = Depends(require_admin)):
     """Get all users (admin only)"""
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
     return users
+
+@api_router.post("/users")
+async def create_user(data: CreateUserRequest, admin: dict = Depends(require_admin)):
+    """Create new user (admin only)"""
+    # Check if email already exists
+    existing = await db.users.find_one({"email": data.email.lower()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email jest już zarejestrowany")
+    
+    if len(data.password) < 6:
+        raise HTTPException(status_code=400, detail="Hasło musi mieć minimum 6 znaków")
+    
+    if data.role not in ["admin", "pracownik"]:
+        raise HTTPException(status_code=400, detail="Nieprawidłowa rola")
+    
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    
+    user_doc = {
+        "user_id": user_id,
+        "email": data.email.lower(),
+        "name": data.name,
+        "password_hash": hash_password(data.password),
+        "role": data.role,
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    await db.users.insert_one(user_doc)
+    
+    return {
+        "user_id": user_id,
+        "email": data.email.lower(),
+        "name": data.name,
+        "role": data.role,
+        "message": "Użytkownik został utworzony"
+    }
 
 @api_router.put("/users/{user_id}/role")
 async def update_user_role(user_id: str, request: Request, admin: dict = Depends(require_admin)):
@@ -311,6 +325,43 @@ async def update_user_role(user_id: str, request: Request, admin: dict = Depends
         raise HTTPException(status_code=404, detail="Nie znaleziono użytkownika")
     
     return {"message": "Rola zaktualizowana"}
+
+@api_router.put("/users/{user_id}/password")
+async def reset_user_password(user_id: str, request: Request, admin: dict = Depends(require_admin)):
+    """Reset user password (admin only)"""
+    body = await request.json()
+    new_password = body.get("new_password")
+    
+    if not new_password or len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Hasło musi mieć minimum 6 znaków")
+    
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"password_hash": hash_password(new_password)}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Nie znaleziono użytkownika")
+    
+    # Invalidate user sessions
+    await db.user_sessions.delete_many({"user_id": user_id})
+    
+    return {"message": "Hasło zostało zresetowane"}
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
+    """Delete user (admin only)"""
+    if user_id == admin["user_id"]:
+        raise HTTPException(status_code=400, detail="Nie możesz usunąć własnego konta")
+    
+    result = await db.users.delete_one({"user_id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Nie znaleziono użytkownika")
+    
+    # Delete user sessions
+    await db.user_sessions.delete_many({"user_id": user_id})
+    
+    return {"message": "Użytkownik został usunięty"}
 
 @api_router.get("/workers")
 async def get_workers(user: dict = Depends(require_user)):
@@ -333,7 +384,6 @@ async def import_devices(file: UploadFile = File(...), admin: dict = Depends(req
     devices_imported = 0
     errors = []
     
-    # Assuming headers in first row: nazwa, numer_seryjny, kod_kreskowy, kod_qr
     for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if not row or not row[0]:
             continue
@@ -350,7 +400,6 @@ async def import_devices(file: UploadFile = File(...), admin: dict = Depends(req
                 "created_at": datetime.now(timezone.utc)
             }
             
-            # Check if device with same serial number exists
             existing = await db.devices.find_one({"numer_seryjny": device["numer_seryjny"]})
             if not existing:
                 await db.devices.insert_one(device)
@@ -430,7 +479,6 @@ async def create_installation(request: Request, user: dict = Depends(require_use
     if not device_id:
         raise HTTPException(status_code=400, detail="Wymagane device_id")
     
-    # Verify device exists and is assigned to user
     device = await db.devices.find_one({"device_id": device_id}, {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Nie znaleziono urządzenia")
@@ -449,13 +497,11 @@ async def create_installation(request: Request, user: dict = Depends(require_use
     
     await db.installations.insert_one(installation)
     
-    # Update device status
     await db.devices.update_one(
         {"device_id": device_id},
         {"$set": {"status": "zainstalowany"}}
     )
     
-    # Return without _id
     installation.pop("_id", None)
     return installation
 
@@ -501,7 +547,6 @@ async def get_installation_stats(user: dict = Depends(require_user)):
     
     stats_by_type = await db.installations.aggregate(pipeline).to_list(100)
     
-    # Stats by user
     pipeline_users = [
         {"$group": {
             "_id": "$user_id",
@@ -510,7 +555,6 @@ async def get_installation_stats(user: dict = Depends(require_user)):
     ]
     stats_by_user = await db.installations.aggregate(pipeline_users).to_list(100)
     
-    # Daily stats (last 7 days)
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
     pipeline_daily = [
         {"$match": {"data_instalacji": {"$gte": week_ago}}},
@@ -657,7 +701,6 @@ async def get_daily_report(user: dict = Depends(require_user)):
         {"_id": 0}
     ).to_list(1000)
     
-    # Group by user
     by_user = {}
     for inst in installations:
         uid = inst["user_id"]
@@ -665,7 +708,6 @@ async def get_daily_report(user: dict = Depends(require_user)):
             by_user[uid] = []
         by_user[uid].append(inst)
     
-    # Get user names
     report = []
     for uid, insts in by_user.items():
         user_doc = await db.users.find_one({"user_id": uid}, {"_id": 0, "password_hash": 0})
