@@ -395,23 +395,7 @@ export default function Scanner() {
                 </View>
               )}
 
-              {/* Client Address Input */}
-              <View style={styles.addressSection}>
-                <Text style={styles.addressLabel}>
-                  <Ionicons name="location" size={16} color="#3b82f6" /> Adres klienta *
-                </Text>
-                <TextInput
-                  style={styles.addressInput}
-                  placeholder="Wpisz adres klienta (wymagane)"
-                  placeholderTextColor="#666"
-                  value={clientAddress}
-                  onChangeText={setClientAddress}
-                  multiline
-                  numberOfLines={2}
-                />
-              </View>
-
-              {/* Order Type Selection */}
+              {/* Order Type Selection - FIRST */}
               <Text style={styles.orderTypeLabel}>Rodzaj zlecenia:</Text>
               <View style={styles.orderTypes}>
                 {orderTypes.map((type) => (
@@ -420,8 +404,15 @@ export default function Scanner() {
                     style={[
                       styles.orderTypeButton,
                       orderType === type && styles.orderTypeButtonActive,
+                      orderType === type && type === 'uszkodzony' && styles.orderTypeButtonDamaged,
                     ]}
-                    onPress={() => setOrderType(type)}
+                    onPress={() => {
+                      setOrderType(type);
+                      // Clear address if damaged is selected
+                      if (type === 'uszkodzony') {
+                        setClientAddress('');
+                      }
+                    }}
                   >
                     <Text style={[
                       styles.orderTypeText,
@@ -433,21 +424,52 @@ export default function Scanner() {
                 ))}
               </View>
 
+              {/* Client Address Input - SECOND (disabled for uszkodzony) */}
+              {orderType !== 'uszkodzony' && (
+                <View style={styles.addressSection}>
+                  <Text style={styles.addressLabel}>
+                    <Ionicons name="location" size={16} color="#3b82f6" /> Adres klienta *
+                  </Text>
+                  <TextInput
+                    style={styles.addressInput}
+                    placeholder="Wpisz adres klienta (wymagane)"
+                    placeholderTextColor="#666"
+                    value={clientAddress}
+                    onChangeText={setClientAddress}
+                    multiline
+                    numberOfLines={2}
+                  />
+                </View>
+              )}
+
+              {/* Info for damaged devices */}
+              {orderType === 'uszkodzony' && (
+                <View style={styles.damagedInfoBox}>
+                  <Ionicons name="warning" size={20} color="#f59e0b" />
+                  <Text style={styles.damagedInfoText}>
+                    Urządzenie zostanie przeniesione do zakładki "Uszkodzone"
+                  </Text>
+                </View>
+              )}
+
               {/* Install Button */}
               <TouchableOpacity
                 style={[
                   styles.installButton,
-                  !clientAddress.trim() && styles.installButtonDisabled
+                  orderType !== 'uszkodzony' && !clientAddress.trim() && styles.installButtonDisabled,
+                  orderType === 'uszkodzony' && styles.installButtonDamaged,
                 ]}
                 onPress={handleInstall}
-                disabled={isInstalling || !clientAddress.trim()}
+                disabled={isInstalling || (orderType !== 'uszkodzony' && !clientAddress.trim())}
               >
                 {isInstalling ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Ionicons name="checkmark-circle" size={24} color="#fff" />
-                    <Text style={styles.installButtonText}>Zarejestruj {orderType}</Text>
+                    <Ionicons name={orderType === 'uszkodzony' ? 'alert-circle' : 'checkmark-circle'} size={24} color="#fff" />
+                    <Text style={styles.installButtonText}>
+                      {orderType === 'uszkodzony' ? 'Oznacz jako uszkodzone' : `Zarejestruj ${orderType}`}
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
