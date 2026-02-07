@@ -146,6 +146,70 @@ class BackupLog(BaseModel):
     sent_ftp: bool = False
     error_message: Optional[str] = None
 
+class ActivityLog(BaseModel):
+    """Model for tracking all user activities and device history"""
+    log_id: str = Field(default_factory=lambda: f"log_{uuid.uuid4().hex[:12]}")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    # Who performed the action
+    user_id: str
+    user_name: str
+    user_role: str
+    
+    # What action was performed
+    action_type: str  # login, logout, device_scan, device_install, device_assign, device_return, task_create, task_complete, etc.
+    action_description: str
+    
+    # Related entities
+    device_serial: Optional[str] = None
+    device_name: Optional[str] = None
+    device_id: Optional[str] = None
+    task_id: Optional[str] = None
+    target_user_id: Optional[str] = None
+    target_user_name: Optional[str] = None
+    
+    # Additional details
+    details: Optional[dict] = None
+    ip_address: Optional[str] = None
+
+# ==================== ACTIVITY LOGGING HELPER ====================
+
+async def log_activity(
+    user_id: str,
+    user_name: str,
+    user_role: str,
+    action_type: str,
+    action_description: str,
+    device_serial: str = None,
+    device_name: str = None,
+    device_id: str = None,
+    task_id: str = None,
+    target_user_id: str = None,
+    target_user_name: str = None,
+    details: dict = None,
+    ip_address: str = None
+):
+    """Log user activity to the database"""
+    log_entry = {
+        "log_id": f"log_{uuid.uuid4().hex[:12]}",
+        "timestamp": datetime.now(timezone.utc),
+        "user_id": user_id,
+        "user_name": user_name,
+        "user_role": user_role,
+        "action_type": action_type,
+        "action_description": action_description,
+        "device_serial": device_serial,
+        "device_name": device_name,
+        "device_id": device_id,
+        "task_id": task_id,
+        "target_user_id": target_user_id,
+        "target_user_name": target_user_name,
+        "details": details,
+        "ip_address": ip_address
+    }
+    await db.activity_logs.insert_one(log_entry)
+    return log_entry
+
 # ==================== AUTH HELPERS ====================
 
 async def get_session_token(request: Request) -> Optional[str]:
