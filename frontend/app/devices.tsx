@@ -327,6 +327,7 @@ export default function Devices() {
     { key: 'dostepny', label: 'Dostępne' },
     { key: 'przypisany', label: 'Przypisane' },
     { key: 'zainstalowany', label: 'Zainstalowane' },
+    { key: 'uszkodzony', label: 'Uszkodzone' },
   ];
 
   const isAdmin = user?.role === 'admin';
