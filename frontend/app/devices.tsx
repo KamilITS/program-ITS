@@ -1433,8 +1433,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   advancedFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 10,
-    marginRight: 16,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#3b82f6',
