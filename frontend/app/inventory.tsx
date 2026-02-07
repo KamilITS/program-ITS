@@ -29,6 +29,8 @@ interface UserInventory {
   user_email: string;
   role: string;
   total_devices: number;
+  total_installed?: number;
+  total_damaged?: number;
   by_barcode: BarcodeItem[];
   low_stock: BarcodeItem[];
   has_low_stock: boolean;
