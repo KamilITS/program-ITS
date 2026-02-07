@@ -100,6 +100,19 @@ export default function Devices() {
     }
   };
 
+  const loadInventory = async () => {
+    if (!isAdmin) return;
+    setInventoryLoading(true);
+    try {
+      const data = await apiFetch('/api/devices/inventory/summary');
+      setInventoryData(data);
+    } catch (error) {
+      console.error('Error loading inventory:', error);
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       loadData();
