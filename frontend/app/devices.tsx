@@ -414,8 +414,6 @@ export default function Devices() {
     { key: 'uszkodzony', label: 'Uszkodzone' },
   ];
 
-  const isAdmin = user?.role === 'admin';
-
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('pl-PL', {
