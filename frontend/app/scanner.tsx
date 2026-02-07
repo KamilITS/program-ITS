@@ -1233,6 +1233,21 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
   },
+  notFoundError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    marginTop: 16,
+  },
+  notFoundErrorText: {
+    color: '#ef4444',
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+  },
   // Device Type Selection Modal Styles
   deviceTypeSelectItem: {
     flexDirection: 'row',
