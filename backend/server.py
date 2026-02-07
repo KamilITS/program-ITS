@@ -1672,6 +1672,22 @@ async def export_returns_excel(admin: dict = Depends(require_admin)):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+@api_router.post("/returns/mark-returned")
+async def mark_returns_as_returned(admin: dict = Depends(require_admin)):
+    """Mark all pending returns as returned to warehouse (admin only)"""
+    result = await db.device_returns.update_many(
+        {"returned_to_warehouse": {"$ne": True}},
+        {"$set": {
+            "returned_to_warehouse": True,
+            "returned_at": datetime.now(timezone.utc)
+        }}
+    )
+    
+    return {
+        "message": f"Oznaczono {result.modified_count} urządzeń jako zwrócone do magazynu",
+        "count": result.modified_count
+    }
+
 # ==================== DEVICE STATUS UPDATE - DAMAGED ====================
 
 @api_router.post("/devices/{device_id}/mark-damaged")
