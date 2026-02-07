@@ -269,15 +269,14 @@ export default function Dashboard() {
                 <Ionicons name="chevron-forward" size={20} color="#888" />
               </TouchableOpacity>
               
-              {Platform.OS === 'web' && (
-                <TouchableOpacity
-                  style={styles.adminButton}
-                  onPress={() => router.push('/import')}
-                >
-                  <Ionicons name="cloud-upload-outline" size={24} color="#fff" />
-                  <Text style={styles.adminButtonText}>Importuj urządzenia</Text>
-                  <Ionicons name="chevron-forward" size={20} color="#888" />
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/import')}
+              >
+                <Ionicons name="add-circle-outline" size={24} color="#fff" />
+                <Text style={styles.adminButtonText}>Dodaj urządzenia do magazynu</Text>
+                <Ionicons name="chevron-forward" size={20} color="#888" />
+              </TouchableOpacity>
               )}
               
               <TouchableOpacity
