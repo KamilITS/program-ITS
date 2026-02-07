@@ -227,6 +227,7 @@ export default function Returns() {
   const handleExport = async () => {
     try {
       const token = await AsyncStorage.getItem('session_token');
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || '';
       
       if (Platform.OS === 'web') {
         // Web export
@@ -248,34 +249,9 @@ export default function Returns() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       } else {
-        // Mobile export using FileSystem and Sharing
-        const filename = `zwroty_urzadzen_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
-        const fileUri = FileSystem.documentDirectory + filename;
-        
-        const downloadResult = await FileSystem.downloadAsync(
-          `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/returns/export`,
-          fileUri,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          }
-        );
-        
-        if (downloadResult.status !== 200) {
-          throw new Error('Błąd pobierania pliku');
-        }
-        
-        // Check if sharing is available
-        const isAvailable = await Sharing.isAvailableAsync();
-        if (isAvailable) {
-          await Sharing.shareAsync(downloadResult.uri, {
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            dialogTitle: 'Eksport zwrotów urządzeń',
-          });
-        } else {
-          Alert.alert('Info', 'Plik zapisany w: ' + downloadResult.uri);
-        }
+        // Mobile - open link in browser to download
+        const exportUrl = `${backendUrl}/api/returns/export?token=${token}`;
+        await Linking.openURL(exportUrl);
       }
       
       // Move exported items to "returned to warehouse"
