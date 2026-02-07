@@ -286,7 +286,7 @@ export default function Returns() {
 
   const formatDate = (dateStr: string) => {
     try {
-      return format(new Date(dateStr), 'd MMM yyyy, HH:mm', { locale: pl });
+      return format(new Date(dateStr), 'd-MM-yyyy', { locale: pl });
     } catch {
       return dateStr;
     }
@@ -299,20 +299,22 @@ export default function Returns() {
           <Ionicons name="barcode-outline" size={20} color="#3b82f6" />
           <Text style={styles.serialText}>{item.device_serial}</Text>
         </View>
-        <View style={styles.returnActions}>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => openEditModal(item)}
-          >
-            <Ionicons name="pencil" size={18} color="#f59e0b" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDeleteReturn(item.return_id)}
-          >
-            <Ionicons name="trash-outline" size={18} color="#ef4444" />
-          </TouchableOpacity>
-        </View>
+        {!item.returned_to_warehouse && (
+          <View style={styles.returnActions}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => openEditModal(item)}
+            >
+              <Ionicons name="pencil" size={18} color="#f59e0b" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDeleteReturn(item.return_id)}
+            >
+              <Ionicons name="trash-outline" size={18} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
       
       <View style={styles.returnDetails}>
