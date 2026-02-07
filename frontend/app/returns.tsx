@@ -479,11 +479,13 @@ export default function Returns() {
         </ScrollView>
       </View>
 
-      {/* Export Button - only for pending items */}
-      {Platform.OS === 'web' && activeTab === 'pending' && filteredReturns.length > 0 && (
+      {/* Export Button - for pending items on all platforms */}
+      {activeTab === 'pending' && filteredReturns.length > 0 && (
         <TouchableOpacity style={styles.exportButton} onPress={handleExport}>
           <Ionicons name="download-outline" size={20} color="#fff" />
-          <Text style={styles.exportButtonText}>Eksportuj do Excel i przenieś do zwróconych</Text>
+          <Text style={styles.exportButtonText}>
+            {Platform.OS === 'web' ? 'Eksportuj do Excel i przenieś do zwróconych' : 'Eksportuj i udostępnij'}
+          </Text>
         </TouchableOpacity>
       )}
 
