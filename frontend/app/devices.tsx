@@ -142,6 +142,69 @@ export default function Devices() {
     }
   };
 
+  // Load device history
+  const loadDeviceHistory = async (deviceSerial: string) => {
+    setHistoryLoading(true);
+    try {
+      const data = await apiFetch(`/api/activity-logs/device/${encodeURIComponent(deviceSerial)}?limit=100`);
+      setDeviceHistory(data);
+    } catch (error) {
+      console.error('Error loading device history:', error);
+      setDeviceHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const openDeviceHistory = (device: Device) => {
+    setHistoryDevice(device);
+    setHistoryModalVisible(true);
+    loadDeviceHistory(device.numer_seryjny);
+  };
+
+  const getActionTypeIcon = (actionType: string): string => {
+    switch (actionType) {
+      case 'login': return 'log-in-outline';
+      case 'logout': return 'log-out-outline';
+      case 'device_install': return 'hardware-chip-outline';
+      case 'device_assign': return 'arrow-forward-circle-outline';
+      case 'device_add': return 'add-circle-outline';
+      case 'device_scan': return 'scan-outline';
+      case 'device_return': return 'return-down-back-outline';
+      case 'device_damage': return 'warning-outline';
+      default: return 'ellipse-outline';
+    }
+  };
+
+  const getActionTypeColor = (actionType: string): string => {
+    switch (actionType) {
+      case 'login': return '#10b981';
+      case 'logout': return '#888';
+      case 'device_install': return '#3b82f6';
+      case 'device_assign': return '#f59e0b';
+      case 'device_add': return '#10b981';
+      case 'device_scan': return '#8b5cf6';
+      case 'device_return': return '#ef4444';
+      case 'device_damage': return '#ef4444';
+      default: return '#888';
+    }
+  };
+
+  const formatHistoryDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('pl-PL', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       loadData();
