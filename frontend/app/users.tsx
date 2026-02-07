@@ -685,6 +685,89 @@ export default function Users() {
           </View>
         </View>
       </Modal>
+
+      {/* Activity History Modal */}
+      <Modal
+        visible={activityModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setActivityModalVisible(false);
+          setActivityLogs([]);
+          setSelectedUser(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '90%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Historia aktywności</Text>
+              <TouchableOpacity onPress={() => {
+                setActivityModalVisible(false);
+                setActivityLogs([]);
+                setSelectedUser(null);
+              }}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            
+            {selectedUser && (
+              <View style={styles.activityUserInfo}>
+                <Ionicons name="person-circle" size={32} color="#8b5cf6" />
+                <Text style={styles.activityUserName}>{selectedUser.name}</Text>
+              </View>
+            )}
+            
+            {activityLoading ? (
+              <View style={styles.activityLoading}>
+                <Text style={styles.loadingText}>Ładowanie historii...</Text>
+              </View>
+            ) : activityLogs.length === 0 ? (
+              <View style={styles.activityEmpty}>
+                <Ionicons name="document-text-outline" size={48} color="#666" />
+                <Text style={styles.emptyText}>Brak zarejestrowanych aktywności</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={activityLogs}
+                keyExtractor={(item) => item.log_id}
+                style={styles.activityList}
+                renderItem={({ item }) => (
+                  <View style={styles.activityItem}>
+                    <View style={[styles.activityIcon, { backgroundColor: getActionTypeColor(item.action_type) + '20' }]}>
+                      <Ionicons 
+                        name={getActionTypeIcon(item.action_type) as any} 
+                        size={20} 
+                        color={getActionTypeColor(item.action_type)} 
+                      />
+                    </View>
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityDescription}>{item.action_description}</Text>
+                      <View style={styles.activityMeta}>
+                        <Ionicons name="time-outline" size={12} color="#888" />
+                        <Text style={styles.activityTime}>
+                          {format(new Date(item.timestamp), 'd MMM yyyy, HH:mm', { locale: pl })}
+                        </Text>
+                        {item.device_serial && (
+                          <>
+                            <Ionicons name="barcode-outline" size={12} color="#888" style={{ marginLeft: 8 }} />
+                            <Text style={styles.activitySerial}>{item.device_serial}</Text>
+                          </>
+                        )}
+                      </View>
+                      {item.ip_address && (
+                        <View style={styles.activityMeta}>
+                          <Ionicons name="globe-outline" size={12} color="#888" />
+                          <Text style={styles.activityIp}>{item.ip_address}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
