@@ -901,4 +901,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+  orderTypeButtonDamaged: {
+    backgroundColor: '#f59e0b',
+    borderColor: '#f59e0b',
+  },
+  damagedInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    gap: 10,
+  },
+  damagedInfoText: {
+    color: '#f59e0b',
+    fontSize: 14,
+    flex: 1,
+  },
+  installButtonDamaged: {
+    backgroundColor: '#f59e0b',
+  },
 });
