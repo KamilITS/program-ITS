@@ -1555,4 +1555,33 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  scanHeaderButton: {
+    padding: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 8,
+  },
+  selectionActions: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  moveToReturnsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  moveToReturnsText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
