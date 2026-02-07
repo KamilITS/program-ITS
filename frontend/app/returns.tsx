@@ -243,11 +243,34 @@ export default function Returns() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      Alert.alert('Sukces', 'Plik został pobrany');
+      // Move exported items to "returned to warehouse"
+      await apiFetch('/api/returns/mark-returned', {
+        method: 'POST',
+        body: {},
+      });
+      
+      loadReturns();
+      setActiveTab('returned');
+      
+      Alert.alert('Sukces', 'Plik został pobrany. Urządzenia przeniesione do zakładki "Zwrócone do magazynu"');
     } catch (error: any) {
       Alert.alert('Błąd', error.message);
     }
   };
+
+  // Sort and filter returns
+  const filteredReturns = returns
+    .filter((r) => activeTab === 'pending' ? !r.returned_to_warehouse : r.returned_to_warehouse)
+    .sort((a, b) => {
+      if (sortBy === 'date_desc') {
+        return new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime();
+      } else if (sortBy === 'date_asc') {
+        return new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime();
+      } else if (sortBy === 'type') {
+        return (a.device_type || '').localeCompare(b.device_type || '');
+      }
+      return 0;
+    });
 
   const handleBarCodeScanned = ({ data }: { data: string }) => {
     setDeviceSerial(data);
