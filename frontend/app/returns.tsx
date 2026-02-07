@@ -227,23 +227,57 @@ export default function Returns() {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/returns/export', {
-        headers: {
-          'Authorization': `Bearer ${await AsyncStorage.getItem('session_token')}`,
-        },
-      });
+      const token = await AsyncStorage.getItem('session_token');
       
-      if (!response.ok) throw new Error('Błąd eksportu');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `zwroty_urzadzen_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      if (Platform.OS === 'web') {
+        // Web export
+        const response = await fetch('/api/returns/export', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (!response.ok) throw new Error('Błąd eksportu');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `zwroty_urzadzen_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        // Mobile export using FileSystem and Sharing
+        const filename = `zwroty_urzadzen_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
+        const fileUri = FileSystem.documentDirectory + filename;
+        
+        const downloadResult = await FileSystem.downloadAsync(
+          `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/returns/export`,
+          fileUri,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
+        
+        if (downloadResult.status !== 200) {
+          throw new Error('Błąd pobierania pliku');
+        }
+        
+        // Check if sharing is available
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(downloadResult.uri, {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            dialogTitle: 'Eksport zwrotów urządzeń',
+          });
+        } else {
+          Alert.alert('Info', 'Plik zapisany w: ' + downloadResult.uri);
+        }
+      }
       
       // Move exported items to "returned to warehouse"
       await apiFetch('/api/returns/mark-returned', {
@@ -254,7 +288,7 @@ export default function Returns() {
       loadReturns();
       setActiveTab('returned');
       
-      Alert.alert('Sukces', 'Plik został pobrany. Urządzenia przeniesione do zakładki "Zwrócone do magazynu"');
+      Alert.alert('Sukces', 'Eksport zakończony. Urządzenia przeniesione do zakładki "Zwrócone do magazynu"');
     } catch (error: any) {
       Alert.alert('Błąd', error.message);
     }
