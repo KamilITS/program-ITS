@@ -412,15 +412,6 @@ export default function Scanner() {
                 </View>
               </View>
 
-              {/* GPS Location */}
-              {gpsAddress && (
-                <View style={styles.locationInfo}>
-                  <Ionicons name="navigate" size={18} color="#10b981" />
-                  <Text style={styles.locationLabel}>Lokalizacja GPS:</Text>
-                  <Text style={styles.locationText}>{gpsAddress}</Text>
-                </View>
-              )}
-
               {/* Order Type Selection - FIRST */}
               <Text style={styles.orderTypeLabel}>Rodzaj zlecenia:</Text>
               <View style={styles.orderTypes}>
@@ -464,7 +455,22 @@ export default function Scanner() {
                     onChangeText={setClientAddress}
                     multiline
                     numberOfLines={2}
+                    onFocus={() => {
+                      // Scroll to bottom when focusing on address input
+                      setTimeout(() => {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                      }, 300);
+                    }}
                   />
+                </View>
+              )}
+
+              {/* GPS Location - moved to bottom */}
+              {gpsAddress && orderType !== 'uszkodzony' && (
+                <View style={styles.locationInfo}>
+                  <Ionicons name="navigate" size={18} color="#10b981" />
+                  <Text style={styles.locationLabel}>Lokalizacja GPS:</Text>
+                  <Text style={styles.locationText}>{gpsAddress}</Text>
                 </View>
               )}
 
