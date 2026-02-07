@@ -1595,7 +1595,14 @@ async def add_bulk_returns(request: Request, admin: dict = Depends(require_admin
         raise HTTPException(status_code=400, detail="Brak urządzeń do dodania")
     
     added = 0
+    skipped = 0
     for serial in device_serials:
+        # Check for duplicates
+        existing = await db.device_returns.find_one({"device_serial": serial, "returned_to_warehouse": {"$ne": True}})
+        if existing:
+            skipped += 1
+            continue
+            
         return_entry = {
             "return_id": f"ret_{uuid.uuid4().hex[:12]}",
             "device_serial": serial,
@@ -1606,9 +1613,24 @@ async def add_bulk_returns(request: Request, admin: dict = Depends(require_admin
             "scanned_by_name": admin["name"]
         }
         await db.device_returns.insert_one(return_entry)
+        
+        # Remove device from employee's account (change status to 'zwrocony' or delete assignment)
+        await db.devices.update_one(
+            {"numer_seryjny": serial},
+            {"$set": {
+                "status": "zwrocony",
+                "przypisany_do": None,
+                "returned_at": datetime.now(timezone.utc),
+                "returned_by": admin["user_id"]
+            }}
+        )
         added += 1
     
-    return {"message": f"Dodano {added} urządzeń do zwrotów", "added": added}
+    message = f"Dodano {added} urządzeń do zwrotów"
+    if skipped > 0:
+        message += f" (pominięto {skipped} duplikatów)"
+    
+    return {"message": message, "added": added, "skipped": skipped}
 
 @api_router.put("/returns/{return_id}")
 async def update_device_return(return_id: str, request: Request, admin: dict = Depends(require_admin)):
