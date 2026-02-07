@@ -2176,4 +2176,136 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontWeight: '600',
   },
+  // Device action row styles
+  deviceActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  historyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  historyButtonText: {
+    color: '#8b5cf6',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  deviceHistoryBtn: {
+    position: 'absolute',
+    right: 24,
+    top: 8,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+  },
+  // History modal styles
+  historyDeviceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+    gap: 12,
+  },
+  historyDeviceDetails: {
+    flex: 1,
+  },
+  historyDeviceName: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  historyDeviceSerial: {
+    color: '#3b82f6',
+    fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginTop: 2,
+  },
+  historyStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  historyStatusText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  historyLoading: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#888',
+    fontSize: 14,
+  },
+  historyEmpty: {
+    padding: 40,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    color: '#555',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  historyList: {
+    flex: 1,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
+    gap: 12,
+  },
+  historyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyContent: {
+    flex: 1,
+  },
+  historyDescription: {
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  historyMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  historyTime: {
+    color: '#888',
+    fontSize: 12,
+  },
+  historyUser: {
+    color: '#3b82f6',
+    fontSize: 12,
+  },
+  historyAddress: {
+    color: '#888',
+    fontSize: 11,
+    flex: 1,
+  },
+  historyTarget: {
+    color: '#f59e0b',
+    fontSize: 12,
+  },
 });
