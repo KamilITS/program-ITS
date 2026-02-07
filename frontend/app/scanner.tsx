@@ -659,6 +659,54 @@ export default function Scanner() {
           </View>
         </View>
       </Modal>
+
+      {/* Device Type Selection Modal */}
+      <Modal
+        visible={showDeviceTypePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDeviceTypePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Wybierz typ urządzenia</Text>
+              <TouchableOpacity onPress={() => setShowDeviceTypePicker(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={DEVICE_TYPES}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.deviceTypeSelectItem,
+                    selectedDeviceType === item && styles.deviceTypeSelectItemActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedDeviceType(item);
+                    setShowDeviceTypePicker(false);
+                  }}
+                >
+                  <View style={styles.deviceTypeSelectIcon}>
+                    <Ionicons name="hardware-chip" size={24} color={selectedDeviceType === item ? '#fff' : '#3b82f6'} />
+                  </View>
+                  <Text style={[
+                    styles.deviceTypeSelectText,
+                    selectedDeviceType === item && styles.deviceTypeSelectTextActive,
+                  ]}>
+                    {item}
+                  </Text>
+                  {selectedDeviceType === item && (
+                    <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+                  )}
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item) => item}
+            />
+          </View>
+        </View>
+      </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
