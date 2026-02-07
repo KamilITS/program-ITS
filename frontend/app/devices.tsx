@@ -48,6 +48,7 @@ interface DeviceCategory {
 
 export default function Devices() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { view } = useLocalSearchParams<{ view?: string }>();
   const [devices, setDevices] = useState<Device[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,7 +59,9 @@ export default function Devices() {
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   
   // View mode: 'devices' or 'inventory'
-  const [viewMode, setViewMode] = useState<'devices' | 'inventory'>('devices');
+  const [viewMode, setViewMode] = useState<'devices' | 'inventory'>(
+    view === 'inventory' ? 'inventory' : 'devices'
+  );
   const [inventoryData, setInventoryData] = useState<any[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   
