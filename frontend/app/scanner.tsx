@@ -423,6 +423,68 @@ export default function Scanner() {
           </View>
         </View>
 
+        {/* Scanned Serial Number Display */}
+        {scannedSerialNumber && !device && (
+          <View style={styles.scannedSerialSection}>
+            <Text style={styles.sectionTitle}>Zeskanowany kod</Text>
+            <View style={styles.scannedSerialCard}>
+              <View style={styles.scannedSerialRow}>
+                <Ionicons name="barcode-outline" size={24} color="#3b82f6" />
+                <Text style={styles.scannedSerialText}>{scannedSerialNumber}</Text>
+                <TouchableOpacity 
+                  style={styles.copyButton}
+                  onPress={() => setManualCode(scannedSerialNumber)}
+                >
+                  <Ionicons name="copy-outline" size={20} color="#888" />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Device Type Picker */}
+              <Text style={styles.deviceTypeLabel}>Wybierz typ urządzenia:</Text>
+              <TouchableOpacity 
+                style={styles.deviceTypePicker}
+                onPress={() => setShowDeviceTypePicker(true)}
+              >
+                <Text style={[
+                  styles.deviceTypePickerText,
+                  !selectedDeviceType && styles.deviceTypePickerPlaceholder
+                ]}>
+                  {selectedDeviceType || 'Wybierz typ urządzenia...'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#888" />
+              </TouchableOpacity>
+              
+              <View style={styles.deviceTypeChips}>
+                {DEVICE_TYPES.map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.deviceTypeChip,
+                      selectedDeviceType === type && styles.deviceTypeChipActive,
+                    ]}
+                    onPress={() => setSelectedDeviceType(type)}
+                  >
+                    <Text style={[
+                      styles.deviceTypeChipText,
+                      selectedDeviceType === type && styles.deviceTypeChipTextActive,
+                    ]}>
+                      {type}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Warning that device is not in system */}
+              <View style={styles.notFoundWarning}>
+                <Ionicons name="information-circle" size={18} color="#f59e0b" />
+                <Text style={styles.notFoundWarningText}>
+                  Urządzenie nie zostało znalezione w systemie. Wybierz typ i kontynuuj.
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Device Info */}
         {device && (
           <View style={styles.deviceSection}>
