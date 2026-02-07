@@ -57,6 +57,11 @@ export default function Devices() {
   const [nameFilter, setNameFilter] = useState<string | null>(null);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   
+  // View mode: 'devices' or 'inventory'
+  const [viewMode, setViewMode] = useState<'devices' | 'inventory'>('devices');
+  const [inventoryData, setInventoryData] = useState<any[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  
   // Single device assign modal
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
@@ -72,6 +77,9 @@ export default function Devices() {
   
   // Categories expanded state
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  
+  // Expanded inventory users
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
