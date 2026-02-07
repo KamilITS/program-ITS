@@ -13,6 +13,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Keyboard,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -21,6 +22,8 @@ import * as Location from 'expo-location';
 import { useAuth } from '../src/context/AuthContext';
 import { apiFetch } from '../src/utils/api';
 import { Ionicons } from '@expo/vector-icons';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface Device {
   device_id: string;
@@ -35,7 +38,17 @@ interface ScannedCode {
   type: string;
   data: string;
   timestamp: number;
+  bounds?: { x: number; y: number; width: number; height: number };
 }
+
+// Device type options for selection
+const DEVICE_TYPES = [
+  'ONT',
+  'T-MOBILE CPE',
+  'T-MOBILE STB', 
+  'PLAY CPE',
+  'UPC CPE',
+];
 
 export default function Scanner() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -57,6 +70,13 @@ export default function Scanner() {
   // Multiple codes handling
   const [scannedCodes, setScannedCodes] = useState<ScannedCode[]>([]);
   const [showCodeSelection, setShowCodeSelection] = useState(false);
+  
+  // Scanned serial number display
+  const [scannedSerialNumber, setScannedSerialNumber] = useState<string>('');
+  
+  // Device type selection
+  const [selectedDeviceType, setSelectedDeviceType] = useState<string>('');
+  const [showDeviceTypePicker, setShowDeviceTypePicker] = useState(false);
 
   const orderTypes = ['instalacja', 'wymiana', 'awaria', 'uszkodzony'];
 
