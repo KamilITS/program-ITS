@@ -11,6 +11,7 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -21,8 +22,6 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 
 interface DeviceReturn {
   return_id: string;
