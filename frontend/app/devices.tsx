@@ -628,9 +628,32 @@ export default function Devices() {
       {/* Selection mode header */}
       {selectionMode && (
         <View style={styles.selectionHeader}>
-          <Text style={styles.selectionText}>
-            Wybrano: {selectedDevices.size} urządzeń
-          </Text>
+          <View style={styles.selectionInfo}>
+            <Text style={styles.selectionText}>
+              Wybrano: {selectedDevices.size} urządzeń
+            </Text>
+            <View style={styles.selectAllButtons}>
+              <TouchableOpacity
+                style={styles.selectAllButton}
+                onPress={() => {
+                  // Select all devices that can be selected (available or damaged when filter is 'uszkodzony')
+                  const selectableDevices = devices.filter(d => 
+                    d.status === 'dostepny' || (d.status === 'uszkodzony' && statusFilter === 'uszkodzony')
+                  );
+                  const newSelection = new Set(selectableDevices.map(d => d.device_id));
+                  setSelectedDevices(newSelection);
+                }}
+              >
+                <Text style={styles.selectAllButtonText}>Zaznacz wszystkie</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.selectAllButton}
+                onPress={() => setSelectedDevices(new Set())}
+              >
+                <Text style={styles.selectAllButtonText}>Odznacz</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           <View style={styles.selectionActions}>
             {statusFilter === 'uszkodzony' && selectedDevices.size > 0 && (
               <TouchableOpacity
