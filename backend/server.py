@@ -2002,6 +2002,72 @@ async def add_single_device(request: Request, admin: dict = Depends(require_admi
     
     return device
 
+# ==================== ACTIVITY LOGS ENDPOINTS ====================
+
+@api_router.get("/activity-logs/user/{user_id}")
+async def get_user_activity_logs(
+    user_id: str,
+    limit: int = 100,
+    admin: dict = Depends(require_admin)
+):
+    """Get activity logs for a specific user (admin only)"""
+    logs = await db.activity_logs.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(limit).to_list(limit)
+    
+    # Format timestamps for JSON serialization
+    for log in logs:
+        if "timestamp" in log and isinstance(log["timestamp"], datetime):
+            log["timestamp"] = log["timestamp"].isoformat()
+    
+    return logs
+
+@api_router.get("/activity-logs/device/{device_serial}")
+async def get_device_history(
+    device_serial: str,
+    limit: int = 100,
+    admin: dict = Depends(require_admin)
+):
+    """Get activity history for a specific device serial number (admin only)"""
+    logs = await db.activity_logs.find(
+        {"device_serial": device_serial},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(limit).to_list(limit)
+    
+    # Format timestamps for JSON serialization
+    for log in logs:
+        if "timestamp" in log and isinstance(log["timestamp"], datetime):
+            log["timestamp"] = log["timestamp"].isoformat()
+    
+    return logs
+
+@api_router.get("/activity-logs/recent")
+async def get_recent_activity_logs(
+    limit: int = 100,
+    user_id: Optional[str] = None,
+    action_type: Optional[str] = None,
+    admin: dict = Depends(require_admin)
+):
+    """Get recent activity logs with optional filters (admin only)"""
+    query = {}
+    if user_id:
+        query["user_id"] = user_id
+    if action_type:
+        query["action_type"] = action_type
+    
+    logs = await db.activity_logs.find(
+        query,
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(limit).to_list(limit)
+    
+    # Format timestamps for JSON serialization
+    for log in logs:
+        if "timestamp" in log and isinstance(log["timestamp"], datetime):
+            log["timestamp"] = log["timestamp"].isoformat()
+    
+    return logs
+
 # ==================== HEALTH CHECK ====================
 
 @api_router.get("/")
