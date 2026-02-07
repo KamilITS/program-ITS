@@ -395,6 +395,14 @@ export default function Users() {
           <View style={styles.userActions}>
             <TouchableOpacity
               style={styles.actionButton}
+              onPress={() => openActivityModal(item)}
+            >
+              <Ionicons name="time-outline" size={18} color="#8b5cf6" />
+              <Text style={[styles.actionButtonText, { color: '#8b5cf6' }]}>Historia</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.actionButton}
               onPress={() => {
                 setSelectedUser(item);
                 setPasswordModalVisible(true);
