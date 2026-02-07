@@ -30,6 +30,24 @@ interface User {
   last_login_device?: string;
 }
 
+interface ActivityLog {
+  log_id: string;
+  timestamp: string;
+  user_id: string;
+  user_name: string;
+  user_role: string;
+  action_type: string;
+  action_description: string;
+  device_serial?: string;
+  device_name?: string;
+  device_id?: string;
+  task_id?: string;
+  target_user_id?: string;
+  target_user_name?: string;
+  details?: any;
+  ip_address?: string;
+}
+
 export default function Users() {
   const { user, isAuthenticated, isLoading, changePassword } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
@@ -39,7 +57,12 @@ export default function Users() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [myPasswordModalVisible, setMyPasswordModalVisible] = useState(false);
+  const [activityModalVisible, setActivityModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  
+  // Activity logs state
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
   
   // Form states
   const [newUserName, setNewUserName] = useState('');
