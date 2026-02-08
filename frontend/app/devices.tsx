@@ -1366,8 +1366,8 @@ export default function Devices() {
           setDeviceFullInfo(null);
         }}
       >
-        <View style={[styles.modalOverlay, { justifyContent: 'flex-start', paddingTop: 50 }]}>
-          <View style={[styles.modalContent, { maxHeight: '90%', borderTopLeftRadius: 24, borderTopRightRadius: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }]}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '85%', flex: 0 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Historia urządzenia</Text>
               <TouchableOpacity onPress={() => {
@@ -1423,25 +1423,20 @@ export default function Devices() {
                 <Text style={styles.emptySubtext}>Historia będzie rejestrowana od teraz</Text>
               </View>
             ) : (
-              <>
+              <View style={{ flex: 1, minHeight: 300 }}>
                 <View style={styles.historyTimelineHeader}>
                   <Text style={styles.historyTimelineTitle}>Oś czasu ({deviceHistory.length} zdarzeń)</Text>
                 </View>
-                <FlatList
-                  data={deviceHistory}
-                  keyExtractor={(item) => item.log_id}
-                  style={styles.historyList}
-                  renderItem={({ item, index }) => (
-                    <View style={styles.historyItem}>
-                      {/* Timeline line */}
+                <ScrollView 
+                  style={{ flex: 1 }} 
+                  contentContainerStyle={{ paddingBottom: 20 }}
+                  showsVerticalScrollIndicator={true}
+                >
+                  {deviceHistory.map((item, index) => (
+                    <View key={item.log_id} style={styles.historyItem}>
                       <View style={styles.timelineLine}>
-                        <View style={[
-                          styles.timelineDot, 
-                          { backgroundColor: getActionTypeColor(item.action_type) }
-                        ]} />
-                        {index < deviceHistory.length - 1 && (
-                          <View style={styles.timelineConnector} />
-                        )}
+                        <View style={[styles.timelineDot, { backgroundColor: getActionTypeColor(item.action_type) }]} />
+                        {index < deviceHistory.length - 1 && <View style={styles.timelineConnector} />}
                       </View>
                       <View style={styles.historyContent}>
                         <Text style={styles.historyDescription}>{item.action_description}</Text>
@@ -1467,9 +1462,9 @@ export default function Devices() {
                         )}
                       </View>
                     </View>
-                  )}
-                />
-              </>
+                  ))}
+                </ScrollView>
+              </View>
             )}
           </View>
         </View>
