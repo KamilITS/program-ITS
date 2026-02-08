@@ -327,9 +327,10 @@ export default function Tasks() {
 
   const getDateLabel = (dateString: string) => {
     const date = new Date(dateString);
-    if (isToday(date)) return 'Dzisiaj';
-    if (isTomorrow(date)) return 'Jutro';
-    return format(date, 'd MMM', { locale: pl });
+    const timeStr = format(date, 'HH:mm');
+    if (isToday(date)) return `Dzisiaj, ${timeStr}`;
+    if (isTomorrow(date)) return `Jutro, ${timeStr}`;
+    return format(date, 'd MMM, HH:mm', { locale: pl });
   };
 
   const renderTask = ({ item }: { item: Task }) => {
