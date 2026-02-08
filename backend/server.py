@@ -708,11 +708,20 @@ async def get_inventory_summary(admin: dict = Depends(require_admin)):
             {"_id": 0}
         ).to_list(1000)
         
-        # Get installed devices
-        installed_devices = await db.devices.find(
-            {"przypisany_do": usr["user_id"], "status": "zainstalowany"},
+        # Get installed devices - count from installations table
+        installations = await db.installations.find(
+            {"user_id": usr["user_id"]},
             {"_id": 0}
         ).to_list(1000)
+        installed_device_ids = [inst["device_id"] for inst in installations]
+        
+        # Get actual installed devices (confirm they're still installed status)
+        installed_devices = []
+        if installed_device_ids:
+            installed_devices = await db.devices.find(
+                {"device_id": {"$in": installed_device_ids}, "status": "zainstalowany"},
+                {"_id": 0}
+            ).to_list(1000)
         
         # Get damaged devices by this user
         damaged_devices = await db.devices.find(
