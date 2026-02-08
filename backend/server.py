@@ -88,14 +88,14 @@ class Device(BaseModel):
     kod_qr: Optional[str] = None
     przypisany_do: Optional[str] = None
     status: str = "dostepny"
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: get_warsaw_now())
 
 class DeviceInstallation(BaseModel):
     installation_id: str = Field(default_factory=lambda: f"inst_{uuid.uuid4().hex[:12]}")
     device_id: str
     user_id: str
     nazwa_urzadzenia: str
-    data_instalacji: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    data_instalacji: datetime = Field(default_factory=lambda: get_warsaw_now())
     adres: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
@@ -108,7 +108,7 @@ class Message(BaseModel):
     content: Optional[str] = None
     attachment: Optional[str] = None
     attachment_type: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: get_warsaw_now())
 
 class Task(BaseModel):
     task_id: str = Field(default_factory=lambda: f"task_{uuid.uuid4().hex[:12]}")
@@ -119,7 +119,7 @@ class Task(BaseModel):
     due_date: datetime
     status: str = "oczekujace"
     priority: str = "normalne"
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: get_warsaw_now())
 
 class BackupSettings(BaseModel):
     # Email settings
@@ -143,11 +143,11 @@ class BackupSettings(BaseModel):
     schedule_enabled: bool = False
     schedule_time: str = "02:00"  # HH:MM format
     
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: get_warsaw_now())
 
 class BackupLog(BaseModel):
     backup_id: str = Field(default_factory=lambda: f"backup_{uuid.uuid4().hex[:12]}")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: get_warsaw_now())
     size_bytes: int
     status: str  # "success", "failed"
     sent_email: bool = False
@@ -157,7 +157,7 @@ class BackupLog(BaseModel):
 class ActivityLog(BaseModel):
     """Model for tracking all user activities and device history"""
     log_id: str = Field(default_factory=lambda: f"log_{uuid.uuid4().hex[:12]}")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: get_warsaw_now())
     
     # Who performed the action
     user_id: str
@@ -200,7 +200,7 @@ async def log_activity(
     """Log user activity to the database"""
     log_entry = {
         "log_id": f"log_{uuid.uuid4().hex[:12]}",
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": get_warsaw_now(),
         "user_id": user_id,
         "user_name": user_name,
         "user_role": user_role,
@@ -245,7 +245,7 @@ async def get_current_user(request: Request) -> Optional[dict]:
     expires_at = session["expires_at"]
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
-    if expires_at <= datetime.now(timezone.utc):
+    if expires_at <= get_warsaw_now():
         return None
     
     user_doc = await db.users.find_one(
@@ -283,7 +283,7 @@ async def create_default_admin():
             "name": "Kamil",
             "password_hash": hash_password("kamil678@"),
             "role": "admin",
-            "created_at": datetime.now(timezone.utc)
+            "created_at": get_warsaw_now()
         }
         await db.users.insert_one(admin_user)
         logger.info(f"Created default admin account: {admin_email}")
@@ -310,7 +310,7 @@ async def login(data: LoginRequest, request: Request, response: Response):
     
     # Create new session
     session_token = generate_token()
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    expires_at = get_warsaw_now() + timedelta(days=7)
     
     # Get IP address and User-Agent
     forwarded_for = request.headers.get("X-Forwarded-For", "")
@@ -321,14 +321,14 @@ async def login(data: LoginRequest, request: Request, response: Response):
         "user_id": user["user_id"],
         "session_token": session_token,
         "expires_at": expires_at,
-        "created_at": datetime.now(timezone.utc)
+        "created_at": get_warsaw_now()
     })
     
     # Save last login info to user document
     await db.users.update_one(
         {"user_id": user["user_id"]},
         {"$set": {
-            "last_login_at": datetime.now(timezone.utc),
+            "last_login_at": get_warsaw_now(),
             "last_login_ip": client_ip,
             "last_login_device": user_agent
         }}
@@ -434,7 +434,7 @@ async def create_user(data: CreateUserRequest, admin: dict = Depends(require_adm
         "name": data.name,
         "password_hash": hash_password(data.password),
         "role": data.role,
-        "created_at": datetime.now(timezone.utc)
+        "created_at": get_warsaw_now()
     }
     
     await db.users.insert_one(user_doc)
@@ -551,8 +551,8 @@ async def import_devices(file: UploadFile = File(...), admin: dict = Depends(req
                 "kod_qr": str(row[3]) if len(row) > 3 and row[3] else None,
                 "przypisany_do": None,
                 "status": "dostepny",
-                "created_at": datetime.now(timezone.utc),
-                "imported_at": datetime.now(timezone.utc),
+                "created_at": get_warsaw_now(),
+                "imported_at": get_warsaw_now(),
                 "imported_by": admin["user_id"]
             }
             
@@ -1119,7 +1119,7 @@ async def create_installation(request: Request, user: dict = Depends(require_use
         "nazwa_urzadzenia": device["nazwa"],
         "numer_seryjny": device.get("numer_seryjny", ""),
         "kod_kreskowy": device.get("kod_kreskowy", ""),
-        "data_instalacji": datetime.now(timezone.utc),
+        "data_instalacji": get_warsaw_now(),
         "adres_klienta": adres_klienta.strip(),
         "latitude": body.get("latitude"),
         "longitude": body.get("longitude"),
@@ -1137,7 +1137,7 @@ async def create_installation(request: Request, user: dict = Depends(require_use
             "zainstalowany_przez": user["user_id"],
             "installer_name": user["name"],
             "adres_instalacji": adres_klienta.strip(),
-            "data_instalacji": datetime.now(timezone.utc)
+            "data_instalacji": get_warsaw_now()
         }}
     )
     
@@ -1212,7 +1212,7 @@ async def get_installation_stats(user: dict = Depends(require_user)):
     ]
     stats_by_user = await db.installations.aggregate(pipeline_users).to_list(100)
     
-    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    week_ago = get_warsaw_now() - timedelta(days=7)
     pipeline_daily = [
         {"$match": {"data_instalacji": {"$gte": week_ago}}},
         {"$group": {
@@ -1246,7 +1246,7 @@ async def send_message(request: Request, user: dict = Depends(require_user)):
         "content": body.get("content"),
         "attachment": body.get("attachment"),
         "attachment_type": body.get("attachment_type"),
-        "created_at": datetime.now(timezone.utc)
+        "created_at": get_warsaw_now()
     }
     
     await db.messages.insert_one(message)
@@ -1280,10 +1280,10 @@ async def create_task(request: Request, admin: dict = Depends(require_admin)):
         "description": body.get("description"),
         "assigned_to": body.get("assigned_to"),
         "assigned_by": admin["user_id"],
-        "due_date": datetime.fromisoformat(body.get("due_date")) if body.get("due_date") else datetime.now(timezone.utc),
+        "due_date": datetime.fromisoformat(body.get("due_date")) if body.get("due_date") else get_warsaw_now(),
         "status": "oczekujace",
         "priority": body.get("priority", "normalne"),
-        "created_at": datetime.now(timezone.utc)
+        "created_at": get_warsaw_now()
     }
     
     await db.tasks.insert_one(task)
@@ -1328,7 +1328,7 @@ async def update_task(task_id: str, request: Request, user: dict = Depends(requi
         update_data["priority"] = body["priority"]
     if "completion_photos" in body:
         update_data["completion_photos"] = body["completion_photos"]
-        update_data["completed_at"] = datetime.now(timezone.utc)
+        update_data["completed_at"] = get_warsaw_now()
         update_data["completed_by"] = user["user_id"]
     
     result = await db.tasks.update_one(
@@ -1357,7 +1357,7 @@ async def get_task(task_id: str, user: dict = Depends(require_user)):
 @api_router.get("/tasks/reminders/check")
 async def check_task_reminders(user: dict = Depends(require_user)):
     """Check for tasks approaching deadline (within 2 hours)"""
-    now = datetime.now(timezone.utc)
+    now = get_warsaw_now()
     two_hours_later = now + timedelta(hours=2)
     
     query = {
@@ -1405,7 +1405,7 @@ async def delete_task(task_id: str, admin: dict = Depends(require_admin)):
 @api_router.get("/report/daily")
 async def get_daily_report(user: dict = Depends(require_user)):
     """Get daily installations report"""
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = get_warsaw_now().replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
     
     installations = await db.installations.find(
@@ -1441,7 +1441,7 @@ async def get_daily_report(user: dict = Depends(require_user)):
 async def create_backup_data() -> dict:
     """Create backup of all database collections"""
     backup = {
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": get_warsaw_now().isoformat(),
         "version": "1.0",
         "data": {}
     }
@@ -1609,7 +1609,7 @@ async def update_backup_settings(request: Request):
         "ftp_enabled": data.get("ftp_enabled", False),
         "schedule_enabled": data.get("schedule_enabled", False),
         "schedule_time": data.get("schedule_time", "02:00"),
-        "updated_at": datetime.now(timezone.utc)
+        "updated_at": get_warsaw_now()
     }
     
     # Handle password fields - only update if not placeholder
@@ -1653,7 +1653,7 @@ async def create_backup(request: Request):
         # Log backup
         log = {
             "backup_id": f"backup_{uuid.uuid4().hex[:12]}",
-            "created_at": datetime.now(timezone.utc),
+            "created_at": get_warsaw_now(),
             "size_bytes": len(backup_bytes),
             "status": "success",
             "sent_email": False,
@@ -1720,7 +1720,7 @@ async def download_backup(request: Request):
         # Log the download
         log = {
             "backup_id": f"backup_{uuid.uuid4().hex[:12]}",
-            "created_at": datetime.now(timezone.utc),
+            "created_at": get_warsaw_now(),
             "size_bytes": len(backup_bytes),
             "status": "success",
             "sent_email": False,
@@ -1764,7 +1764,7 @@ async def test_email_backup(request: Request):
         # Create a small test backup
         test_data = {
             "test": True,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": get_warsaw_now().isoformat(),
             "message": "To jest testowa kopia zapasowa"
         }
         test_bytes = json.dumps(test_data, ensure_ascii=False).encode('utf-8')
@@ -1792,7 +1792,7 @@ async def test_ftp_backup(request: Request):
         # Create a small test file
         test_data = {
             "test": True,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": get_warsaw_now().isoformat(),
             "message": "To jest testowa kopia zapasowa"
         }
         test_bytes = json.dumps(test_data, ensure_ascii=False).encode('utf-8')
@@ -1868,7 +1868,7 @@ async def download_backup_excel(request: Request):
         # Log the download
         log = {
             "backup_id": f"backup_{uuid.uuid4().hex[:12]}",
-            "created_at": datetime.now(timezone.utc),
+            "created_at": get_warsaw_now(),
             "size_bytes": len(output.getvalue()),
             "status": "success",
             "sent_email": False,
@@ -2010,7 +2010,7 @@ async def import_backup_excel(request: Request):
                             "kod_kreskowy": row[3] or row[2],
                             "status": row[4] or "dostepny",
                             "przypisany_do": row[5],
-                            "created_at": datetime.now(timezone.utc)
+                            "created_at": get_warsaw_now()
                         }
                         await db.devices.insert_one(new_device)
                         result["devices"] += 1
@@ -2028,7 +2028,7 @@ async def import_backup_excel(request: Request):
                             "device_id": row[1],
                             "instalator_name": row[2] or "Nieznany",
                             "adres_klienta": row[3] or "",
-                            "data_instalacji": datetime.now(timezone.utc)
+                            "data_instalacji": get_warsaw_now()
                         }
                         await db.installations.insert_one(new_inst)
                         result["installations"] += 1
@@ -2048,7 +2048,7 @@ async def import_backup_excel(request: Request):
                             "priority": row[3] or "medium",
                             "status": row[4] or "pending",
                             "assigned_to_name": row[5],
-                            "created_at": datetime.now(timezone.utc)
+                            "created_at": get_warsaw_now()
                         }
                         await db.tasks.insert_one(new_task)
                         result["tasks"] += 1
@@ -2066,7 +2066,7 @@ class DeviceReturn(BaseModel):
     device_serial: str
     device_type: str  # ONT, CPE, STB
     device_status: str  # z awarii, nowy/uszkodzony
-    scanned_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    scanned_at: datetime = Field(default_factory=lambda: get_warsaw_now())
     scanned_by: str
     scanned_by_name: str
 
@@ -2096,7 +2096,7 @@ async def add_device_return(request: Request, admin: dict = Depends(require_admi
         "device_serial": device_serial,
         "device_type": device_type,
         "device_status": device_status,
-        "scanned_at": datetime.now(timezone.utc),
+        "scanned_at": get_warsaw_now(),
         "scanned_by": admin["user_id"],
         "scanned_by_name": admin["name"]
     }
@@ -2145,7 +2145,7 @@ async def add_bulk_returns(request: Request, admin: dict = Depends(require_admin
             "device_serial": serial,
             "device_type": device_type,
             "device_status": device_status,
-            "scanned_at": datetime.now(timezone.utc),
+            "scanned_at": get_warsaw_now(),
             "scanned_by": admin["user_id"],
             "scanned_by_name": admin["name"]
         }
@@ -2159,7 +2159,7 @@ async def add_bulk_returns(request: Request, admin: dict = Depends(require_admin
             {"$set": {
                 "status": "zwrocony",
                 "przypisany_do": None,
-                "returned_at": datetime.now(timezone.utc),
+                "returned_at": get_warsaw_now(),
                 "returned_by": admin["user_id"]
             }}
         )
@@ -2278,7 +2278,7 @@ async def mark_returns_as_returned(admin: dict = Depends(require_admin)):
         {"returned_to_warehouse": {"$ne": True}},
         {"$set": {
             "returned_to_warehouse": True,
-            "returned_at": datetime.now(timezone.utc)
+            "returned_at": get_warsaw_now()
         }}
     )
     
@@ -2307,7 +2307,7 @@ async def mark_device_damaged(device_id: str, request: Request, user: dict = Dep
         {"device_id": device_id},
         {"$set": {
             "status": "uszkodzony",
-            "damaged_at": datetime.now(timezone.utc),
+            "damaged_at": get_warsaw_now(),
             "damaged_by": user["user_id"],
             "damaged_by_name": user["name"]
         }}
@@ -2356,7 +2356,7 @@ async def add_single_device(request: Request, admin: dict = Depends(require_admi
         "kod_qr": body.get("kod_qr"),
         "przypisany_do": None,
         "status": "dostepny",
-        "created_at": datetime.now(timezone.utc),
+        "created_at": get_warsaw_now(),
         "added_by": admin["user_id"],
         "added_manually": True
     }
