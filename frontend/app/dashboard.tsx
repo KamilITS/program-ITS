@@ -22,12 +22,46 @@ export default function Dashboard() {
   const [tasksCount, setTasksCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingTasks, setPendingTasks] = useState(0);
+  const [newTasksAlert, setNewTasksAlert] = useState<{count: number, titles: string[]} | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace('/');
     }
   }, [isLoading, isAuthenticated]);
+
+  const checkForNewTasks = async (tasks: any[]) => {
+    // Only check for workers (not admins)
+    if (user?.role === 'admin') return;
+    
+    const lastCheckTimestamp = await AsyncStorage.getItem('lastTaskCheckTimestamp');
+    const myPendingTasks = tasks.filter((t: any) => 
+      t.status !== 'zakonczone' && t.assigned_to === user?.user_id
+    );
+    
+    if (lastCheckTimestamp) {
+      const lastCheck = new Date(lastCheckTimestamp);
+      const newTasks = myPendingTasks.filter((t: any) => {
+        const taskCreated = new Date(t.created_at);
+        return taskCreated > lastCheck;
+      });
+      
+      if (newTasks.length > 0) {
+        setNewTasksAlert({
+          count: newTasks.length,
+          titles: newTasks.slice(0, 3).map((t: any) => t.title)
+        });
+      }
+    } else {
+      // First time - just save current timestamp
+      await AsyncStorage.setItem('lastTaskCheckTimestamp', new Date().toISOString());
+    }
+  };
+
+  const dismissNewTasksAlert = async () => {
+    await AsyncStorage.setItem('lastTaskCheckTimestamp', new Date().toISOString());
+    setNewTasksAlert(null);
+  };
 
   const loadData = async () => {
     try {
@@ -44,6 +78,9 @@ export default function Dashboard() {
       const pending = tasks.filter((t: any) => t.status !== 'zakonczone').length;
       setTasksCount(pending);
       setPendingTasks(pending);
+      
+      // Check for new tasks (only for workers)
+      await checkForNewTasks(tasks);
       
       // Count unread messages
       const lastReadTimestamp = await AsyncStorage.getItem('lastReadMessageTimestamp');
