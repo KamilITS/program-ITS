@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,9 +16,10 @@ interface ChatMessage {
 
 interface NotificationContextType {
   unreadChatCount: number;
+  showChatNotification: boolean;
+  chatNotificationData: { sender: string; preview: string } | null;
   dismissChatNotification: () => void;
   markChatAsRead: () => void;
-  refreshNotifications: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -37,90 +38,44 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const router = useRouter();
   
   const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const [notification, setNotification] = useState<{ sender: string; preview: string; messageId: string } | null>(null);
-  const [shownMessageIds, setShownMessageIds] = useState<Set<string>>(new Set());
-  
-  // Animation for notification
-  const slideAnim = useRef(new Animated.Value(-150)).current;
-  const [showBanner, setShowBanner] = useState(false);
+  const [showChatNotification, setShowChatNotification] = useState(false);
+  const [chatNotificationData, setChatNotificationData] = useState<{ sender: string; preview: string } | null>(null);
+  const [lastShownMessageId, setLastShownMessageId] = useState<string | null>(null);
 
   const isOnChatScreen = pathname === '/chat';
 
-  const showNotification = useCallback((sender: string, preview: string, messageId: string) => {
-    // Don't show if already shown this message
-    if (shownMessageIds.has(messageId)) return;
-    
-    setShownMessageIds(prev => new Set(prev).add(messageId));
-    setNotification({ sender, preview, messageId });
-    setShowBanner(true);
-    
-    // Reset animation value first
-    slideAnim.setValue(-150);
-    
-    // Animate in
-    Animated.spring(slideAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 8,
-    }).start();
-
-    // Auto-hide after 6 seconds
-    setTimeout(() => {
-      hideBanner();
-    }, 6000);
-  }, [shownMessageIds, slideAnim]);
-
-  const hideBanner = useCallback(() => {
-    Animated.timing(slideAnim, {
-      toValue: -150,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      setShowBanner(false);
-      setNotification(null);
-    });
-  }, [slideAnim]);
-
   const dismissChatNotification = useCallback(() => {
-    hideBanner();
-  }, [hideBanner]);
+    setShowChatNotification(false);
+    setChatNotificationData(null);
+  }, []);
 
   const markChatAsRead = useCallback(async () => {
     if (!user) return;
     const lastCheckKey = `lastChatCheck_${user.user_id}`;
     await AsyncStorage.setItem(lastCheckKey, new Date().toISOString());
     setUnreadChatCount(0);
-    hideBanner();
-  }, [user, hideBanner]);
+    setShowChatNotification(false);
+    setChatNotificationData(null);
+  }, [user]);
 
   const checkForNewMessages = useCallback(async () => {
-    if (!isAuthenticated || !user) {
-      console.log('[Notifications] Not authenticated or no user');
-      return;
-    }
-
-    console.log('[Notifications] Checking for new messages...');
+    if (!isAuthenticated || !user) return;
 
     try {
       const messages: ChatMessage[] = await apiFetch('/api/messages?limit=50');
       
-      console.log('[Notifications] Got messages:', messages.length);
-      
       if (messages.length === 0) return;
 
-      // Get last check timestamp
       const lastCheckKey = `lastChatCheck_${user.user_id}`;
       const lastCheckTimestamp = await AsyncStorage.getItem(lastCheckKey);
       
-      console.log('[Notifications] Last check:', lastCheckTimestamp);
-      
-      // Filter messages from others (not from current user)
+      // Filter messages from others
       const messagesFromOthers = messages.filter(m => m.sender_id !== user.user_id);
       
-      console.log('[Notifications] Messages from others:', messagesFromOthers.length);
-      
-      if (messagesFromOthers.length === 0) return;
+      if (messagesFromOthers.length === 0) {
+        setUnreadChatCount(0);
+        return;
+      }
 
       // Calculate unread count
       let unreadCount = 0;
@@ -131,49 +86,44 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         newMessages = messagesFromOthers.filter(m => new Date(m.created_at) > lastCheck);
         unreadCount = newMessages.length;
       } else {
-        // First time - count messages from last 1 hour
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        newMessages = messagesFromOthers.filter(m => new Date(m.created_at) > oneHourAgo);
+        // First time - count messages from last 2 hours
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+        newMessages = messagesFromOthers.filter(m => new Date(m.created_at) > twoHoursAgo);
         unreadCount = newMessages.length;
       }
 
-      console.log('[Notifications] Unread count:', unreadCount, 'New messages:', newMessages.length);
-
       setUnreadChatCount(unreadCount);
 
-      // Show notification for the newest unread message if:
-      // 1. Not on chat screen
-      // 2. Has new messages
-      // 3. Haven't shown notification for this message yet
+      // Show notification if not on chat screen and has new messages
       if (!isOnChatScreen && newMessages.length > 0) {
         const newestMessage = newMessages[0];
-        console.log('[Notifications] Should show notification for:', newestMessage.message_id, 'Already shown:', shownMessageIds.has(newestMessage.message_id));
-        if (!shownMessageIds.has(newestMessage.message_id)) {
-          showNotification(
-            newestMessage.sender_name,
-            newestMessage.content?.substring(0, 60) || '[załącznik]',
-            newestMessage.message_id
-          );
+        // Only show if this is a new message we haven't shown before
+        if (newestMessage.message_id !== lastShownMessageId) {
+          setLastShownMessageId(newestMessage.message_id);
+          setChatNotificationData({
+            sender: newestMessage.sender_name,
+            preview: newestMessage.content?.substring(0, 50) || '[załącznik]'
+          });
+          setShowChatNotification(true);
+          
+          // Auto-hide after 8 seconds
+          setTimeout(() => {
+            setShowChatNotification(false);
+          }, 8000);
         }
       }
     } catch (error) {
-      console.error('[Notifications] Error checking messages:', error);
+      console.error('Error checking messages:', error);
     }
-  }, [isAuthenticated, user, isOnChatScreen, shownMessageIds, showNotification]);
-
-  const refreshNotifications = useCallback(() => {
-    checkForNewMessages();
-  }, [checkForNewMessages]);
+  }, [isAuthenticated, user, isOnChatScreen, lastShownMessageId]);
 
   // Poll for new messages every 5 seconds
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    // Initial check
-    const timeout = setTimeout(() => {
-      checkForNewMessages();
-    }, 1000);
-
+    // Initial check after 2 seconds
+    const timeout = setTimeout(checkForNewMessages, 2000);
+    
     // Set up polling
     const interval = setInterval(checkForNewMessages, 5000);
     
@@ -183,16 +133,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
   }, [isAuthenticated, checkForNewMessages]);
 
-  // Hide notification and mark as read when entering chat screen
+  // Hide notification when entering chat screen
   useEffect(() => {
     if (isOnChatScreen) {
-      hideBanner();
+      dismissChatNotification();
       markChatAsRead();
     }
-  }, [isOnChatScreen]);
+  }, [isOnChatScreen, dismissChatNotification, markChatAsRead]);
 
   const handleNotificationPress = () => {
-    hideBanner();
+    dismissChatNotification();
     router.push('/chat');
   };
 
@@ -200,98 +150,87 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     <NotificationContext.Provider
       value={{
         unreadChatCount,
+        showChatNotification,
+        chatNotificationData,
         dismissChatNotification,
         markChatAsRead,
-        refreshNotifications,
       }}
     >
       {children}
       
       {/* Global Chat Notification Banner */}
-      {showBanner && notification && (
-        <Animated.View 
-          style={[
-            styles.notificationBanner,
-            { transform: [{ translateY: slideAnim }] }
-          ]}
-        >
+      {showChatNotification && chatNotificationData && !isOnChatScreen && (
+        <View style={styles.notificationContainer}>
           <TouchableOpacity 
-            style={styles.notificationContent}
+            style={styles.notificationBanner}
             onPress={handleNotificationPress}
-            activeOpacity={0.9}
+            activeOpacity={0.95}
           >
             <View style={styles.notificationIcon}>
-              <Ionicons name="chatbubble-ellipses" size={26} color="#fff" />
+              <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
             </View>
             <View style={styles.notificationText}>
-              <Text style={styles.notificationTitle}>
-                💬 Nowa wiadomość
-              </Text>
+              <Text style={styles.notificationTitle}>💬 Nowa wiadomość</Text>
               <Text style={styles.notificationPreview} numberOfLines={1}>
-                <Text style={styles.senderName}>{notification.sender}:</Text> {notification.preview}
+                {chatNotificationData.sender}: {chatNotificationData.preview}
               </Text>
             </View>
             <TouchableOpacity 
               style={styles.notificationClose}
               onPress={dismissChatNotification}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close-circle" size={26} color="rgba(255,255,255,0.8)" />
+              <Ionicons name="close-circle" size={24} color="rgba(255,255,255,0.8)" />
             </TouchableOpacity>
           </TouchableOpacity>
-        </Animated.View>
+        </View>
       )}
     </NotificationContext.Provider>
   );
 }
 
 const styles = StyleSheet.create({
-  notificationBanner: {
+  notificationContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 55 : 25,
-    left: 12,
-    right: 12,
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 0,
+    right: 0,
     zIndex: 99999,
-    elevation: 999,
+    elevation: 99999,
+    paddingHorizontal: 16,
   },
-  notificationContent: {
+  notificationBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#10b981',
     borderRadius: 16,
     padding: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
   },
   notificationIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   notificationText: {
     flex: 1,
-    marginLeft: 14,
+    marginLeft: 12,
   },
   notificationTitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
   notificationPreview: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
-    marginTop: 3,
-  },
-  senderName: {
-    fontWeight: '700',
+    fontSize: 13,
+    marginTop: 2,
   },
   notificationClose: {
     padding: 4,
