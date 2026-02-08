@@ -89,9 +89,6 @@ export default function Dashboard() {
       // Check for new tasks (only for workers)
       await checkForNewTasks(tasks);
       
-      // Check for new chat messages (for everyone)
-      await checkForNewMessages(messages);
-      
       // Count unread messages
       const lastReadTimestamp = await AsyncStorage.getItem('lastReadMessageTimestamp');
       if (lastReadTimestamp && messages.length > 0) {
