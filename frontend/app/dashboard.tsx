@@ -14,14 +14,6 @@ interface Stats {
   daily: Array<{ _id: string; count: number }>;
 }
 
-interface ChatMessage {
-  message_id: string;
-  sender_id: string;
-  sender_name: string;
-  content?: string;
-  created_at: string;
-}
-
 export default function Dashboard() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -31,7 +23,6 @@ export default function Dashboard() {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingTasks, setPendingTasks] = useState(0);
   const [newTasksAlert, setNewTasksAlert] = useState<{count: number, titles: string[]} | null>(null);
-  const [newChatAlert, setNewChatAlert] = useState<{count: number, lastSender: string, preview: string} | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
