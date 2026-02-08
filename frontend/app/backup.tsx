@@ -410,26 +410,44 @@ export default function BackupScreen() {
         {/* Manual Tab */}
         {activeTab === 'manual' && (
           <View>
+            {/* EXPORT SECTION */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Utwórz kopię zapasową</Text>
+              <Text style={styles.sectionTitle}>Eksport danych</Text>
               <Text style={styles.sectionDescription}>
                 Kopia zawiera: użytkowników, urządzenia, instalacje, zadania i wiadomości (bez załączników).
               </Text>
 
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={downloadBackup}
-                disabled={downloadingBackup}
-              >
-                {downloadingBackup ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="download" size={24} color="#fff" />
-                    <Text style={styles.primaryButtonText}>Pobierz kopię (JSON)</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[styles.primaryButton, { flex: 1 }]}
+                  onPress={downloadBackup}
+                  disabled={downloadingBackup}
+                >
+                  {downloadingBackup ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="code-slash" size={20} color="#fff" />
+                      <Text style={styles.primaryButtonText}>Pobierz JSON</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.primaryButton, { flex: 1, backgroundColor: '#10b981' }]}
+                  onPress={downloadExcel}
+                  disabled={downloadingExcel}
+                >
+                  {downloadingExcel ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="document-text" size={20} color="#fff" />
+                      <Text style={styles.primaryButtonText}>Pobierz Excel</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.buttonRow}>
                 <TouchableOpacity
