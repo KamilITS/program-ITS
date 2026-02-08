@@ -886,6 +886,20 @@ async def restore_device(device_id: str, admin: dict = Depends(require_admin)):
     installer = await db.users.find_one({"user_id": original_installer})
     installer_name = installer.get("name", "Nieznany") if installer else "Nieznany"
     
+    # Log restore activity
+    await log_activity(
+        user_id=admin["user_id"],
+        user_name=admin["name"],
+        user_role="admin",
+        action_type="device_restore",
+        action_description=f"Przywrócono urządzenie {device.get('nazwa', 'Nieznane')} ({device.get('numer_seryjny', 'brak SN')}) do {installer_name}",
+        device_serial=device.get("numer_seryjny"),
+        device_name=device.get("nazwa"),
+        device_id=device_id,
+        target_user_id=original_installer,
+        target_user_name=installer_name
+    )
+    
     return {
         "message": f"Urządzenie zostało przywrócone do użytkownika: {installer_name}",
         "assigned_to": original_installer,
