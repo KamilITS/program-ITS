@@ -1285,6 +1285,9 @@ async def check_task_reminders(user: dict = Depends(require_user)):
     for task in tasks:
         due_date = task.get("due_date")
         if isinstance(due_date, datetime):
+            # Ensure due_date is timezone aware
+            if due_date.tzinfo is None:
+                due_date = due_date.replace(tzinfo=timezone.utc)
             time_left = due_date - now
             minutes_left = int(time_left.total_seconds() / 60)
             
