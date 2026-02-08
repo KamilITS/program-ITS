@@ -556,4 +556,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 12,
   },
+  // New Tasks Alert Styles
+  newTasksAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3b82f6',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  newTasksAlertIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  newTasksAlertContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  newTasksAlertTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  newTasksAlertSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+  },
+  newTasksAlertClose: {
+    padding: 8,
+  },
 });
