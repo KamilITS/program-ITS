@@ -1363,8 +1363,8 @@ export default function Devices() {
           setDeviceFullInfo(null);
         }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '90%' }]}>
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-start', paddingTop: 50 }]}>
+          <View style={[styles.modalContent, { maxHeight: '90%', borderTopLeftRadius: 24, borderTopRightRadius: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Historia urządzenia</Text>
               <TouchableOpacity onPress={() => {
