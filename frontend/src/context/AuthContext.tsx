@@ -197,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      clearSessionTimeout();
       const token = await AsyncStorage.getItem('session_token');
       if (token) {
         await fetch(`${API_URL}/api/auth/logout`, {
@@ -210,6 +211,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Logout failed:', error);
     } finally {
       await AsyncStorage.removeItem('session_token');
+      await AsyncStorage.removeItem('login_time');
+      loginTimeRef.current = null;
       setUser(null);
     }
   };
