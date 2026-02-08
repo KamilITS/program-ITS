@@ -306,6 +306,16 @@ export default function Tasks() {
     !statusFilter || task.status === statusFilter
   );
 
+  // Sort tasks by due date (nearest first)
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    const dateA = new Date(a.due_date);
+    const dateB = new Date(b.due_date);
+    // Completed tasks go to the end
+    if (a.status === 'zakonczone' && b.status !== 'zakonczone') return 1;
+    if (a.status !== 'zakonczone' && b.status === 'zakonczone') return -1;
+    return dateA.getTime() - dateB.getTime();
+  });
+
   const statusFilters = [
     { key: null, label: 'Wszystkie' },
     { key: 'oczekujace', label: 'Oczekujące' },
