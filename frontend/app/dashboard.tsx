@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, P
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '../src/context/AuthContext';
+import { useNotifications } from '../src/context/NotificationContext';
 import { apiFetch } from '../src/utils/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,11 +17,11 @@ interface Stats {
 
 export default function Dashboard() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const { unreadChatCount } = useNotifications();
   const [stats, setStats] = useState<Stats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [devicesCount, setDevicesCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
-  const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingTasks, setPendingTasks] = useState(0);
   const [newTasksAlert, setNewTasksAlert] = useState<{count: number, titles: string[]} | null>(null);
 
