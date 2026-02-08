@@ -801,7 +801,7 @@ export default function Tasks() {
               <Text style={styles.createButtonText}>Utwórz zadanie</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Complete Task Modal */}
@@ -811,7 +811,10 @@ export default function Tasks() {
         animationType="slide"
         onRequestClose={() => setCompleteModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Zakończ zadanie</Text>
