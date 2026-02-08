@@ -287,13 +287,12 @@ export default function Dashboard() {
               onPress={async () => {
                 // Mark messages as read when entering chat
                 await AsyncStorage.setItem('lastReadMessageTimestamp', new Date().toISOString());
-                setUnreadMessages(0);
                 router.push('/chat');
               }}
             >
               <View style={styles.actionIconContainer}>
                 <Ionicons name="chatbubbles-outline" size={32} color="#8b5cf6" />
-                {renderBadge(unreadMessages)}
+                {renderBadge(unreadChatCount)}
               </View>
               <Text style={styles.actionText}>Czat</Text>
             </TouchableOpacity>
