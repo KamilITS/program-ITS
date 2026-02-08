@@ -2000,6 +2000,18 @@ async def mark_device_damaged(device_id: str, request: Request, user: dict = Dep
         }}
     )
     
+    # Log damage activity
+    await log_activity(
+        user_id=user["user_id"],
+        user_name=user["name"],
+        user_role=user.get("role", "pracownik"),
+        action_type="device_damage",
+        action_description=f"Oznaczono urządzenie {device.get('nazwa', 'Nieznane')} ({device.get('numer_seryjny', 'brak SN')}) jako uszkodzone",
+        device_serial=device.get("numer_seryjny"),
+        device_name=device.get("nazwa"),
+        device_id=device_id
+    )
+    
     return {"message": "Urządzenie oznaczone jako uszkodzone"}
 
 @api_router.post("/devices/add-single")
