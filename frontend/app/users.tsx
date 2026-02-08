@@ -770,7 +770,7 @@ export default function Users() {
                         <View style={styles.activityMeta}>
                           <Ionicons name="time-outline" size={12} color="#888" />
                           <Text style={styles.activityTime}>
-                            {format(new Date(item.timestamp), 'd MMM yyyy, HH:mm', { locale: pl })}
+                            {formatInWarsaw(item.timestamp, 'd MMM yyyy, HH:mm')}
                           </Text>
                         </View>
                         {item.device_serial && (
