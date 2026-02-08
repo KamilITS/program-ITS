@@ -107,6 +107,7 @@ export default function Devices() {
   const [deviceHistory, setDeviceHistory] = useState<ActivityLog[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyDevice, setHistoryDevice] = useState<Device | null>(null);
+  const [deviceFullInfo, setDeviceFullInfo] = useState<any>(null); // Device info from API with import date
 
   const isAdmin = user?.role === 'admin';
 
