@@ -21,8 +21,18 @@ import { useAuth } from '../src/context/AuthContext';
 import { apiFetch } from '../src/utils/api';
 import { Ionicons } from '@expo/vector-icons';
 import { format, addDays, isBefore, isToday, isTomorrow } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { pl } from 'date-fns/locale';
 import * as ImagePicker from 'expo-image-picker';
+
+const WARSAW_TZ = 'Europe/Warsaw';
+
+// Helper to format date in Warsaw timezone
+const formatInWarsaw = (date: Date | string, formatStr: string) => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const warsawDate = toZonedTime(d, WARSAW_TZ);
+  return format(warsawDate, formatStr, { locale: pl });
+};
 
 interface Task {
   task_id: string;
