@@ -222,6 +222,123 @@ export default function BackupScreen() {
     }
   };
 
+  const downloadExcel = async () => {
+    setDownloadingExcel(true);
+    try {
+      if (Platform.OS === 'web') {
+        const token = await require('@react-native-async-storage/async-storage').default.getItem('session_token');
+        const response = await fetch('/api/backup/download-excel', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Nie udało się pobrać kopii Excel');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `magazyn_backup_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        Alert.alert('Sukces', 'Kopia zapasowa Excel została pobrana');
+        loadLogs();
+      } else {
+        Alert.alert('Info', 'Pobieranie plików Excel jest dostępne tylko w wersji webowej');
+      }
+    } catch (error: any) {
+      Alert.alert('Błąd', error.message || 'Nie udało się pobrać kopii Excel');
+    } finally {
+      setDownloadingExcel(false);
+    }
+  };
+
+  const importBackupJSON = async () => {
+    if (Platform.OS !== 'web') {
+      Alert.alert('Info', 'Import jest dostępny tylko w wersji webowej');
+      return;
+    }
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      setImportingBackup(true);
+      try {
+        const token = await require('@react-native-async-storage/async-storage').default.getItem('session_token');
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('/api/backup/import-json', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Nie udało się zaimportować kopii');
+        }
+        
+        const result = await response.json();
+        Alert.alert('Sukces', `Import zakończony!\n\nZaimportowano:\n- Użytkownicy: ${result.users || 0}\n- Urządzenia: ${result.devices || 0}\n- Instalacje: ${result.installations || 0}\n- Zadania: ${result.tasks || 0}\n- Wiadomości: ${result.messages || 0}`);
+        loadLogs();
+      } catch (error: any) {
+        Alert.alert('Błąd', error.message || 'Nie udało się zaimportować kopii');
+      } finally {
+        setImportingBackup(false);
+      }
+    };
+    input.click();
+  };
+
+  const importBackupExcel = async () => {
+    if (Platform.OS !== 'web') {
+      Alert.alert('Info', 'Import jest dostępny tylko w wersji webowej');
+      return;
+    }
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx,.xls';
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      setImportingBackup(true);
+      try {
+        const token = await require('@react-native-async-storage/async-storage').default.getItem('session_token');
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('/api/backup/import-excel', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Nie udało się zaimportować kopii Excel');
+        }
+        
+        const result = await response.json();
+        Alert.alert('Sukces', `Import Excel zakończony!\n\nZaimportowano:\n- Użytkownicy: ${result.users || 0}\n- Urządzenia: ${result.devices || 0}\n- Instalacje: ${result.installations || 0}\n- Zadania: ${result.tasks || 0}`);
+        loadLogs();
+      } catch (error: any) {
+        Alert.alert('Błąd', error.message || 'Nie udało się zaimportować kopii Excel');
+      } finally {
+        setImportingBackup(false);
+      }
+    };
+    input.click();
+  };
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleString('pl-PL', {
