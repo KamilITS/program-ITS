@@ -19,7 +19,17 @@ import { useNotifications } from '../src/context/NotificationContext';
 import { apiFetch } from '../src/utils/api';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { pl } from 'date-fns/locale';
+
+const WARSAW_TZ = 'Europe/Warsaw';
+
+// Helper to format date in Warsaw timezone
+const formatInWarsaw = (dateStr: string, formatStr: string) => {
+  const date = new Date(dateStr);
+  const warsawDate = toZonedTime(date, WARSAW_TZ);
+  return format(warsawDate, formatStr, { locale: pl });
+};
 
 interface Message {
   message_id: string;
