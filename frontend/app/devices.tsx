@@ -709,8 +709,8 @@ export default function Devices() {
               <Text style={styles.categoryCount}>
                 {category.count} szt.
               </Text>
-              {/* Low stock warning for employees (< 4 items) */}
-              {!isAdmin && category.count < 4 && (
+              {/* Low stock warning for employees only in "Przypisane" tab (< 4 items) */}
+              {!isAdmin && statusFilter === 'przypisany' && category.count < 4 && (
                 <View style={styles.lowStockBadge}>
                   <Ionicons name="warning" size={12} color="#fff" />
                   <Text style={styles.lowStockText}>Niski stan</Text>
