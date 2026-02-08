@@ -2048,7 +2048,12 @@ async def get_device_history(
     limit: int = 100,
     admin: dict = Depends(require_admin)
 ):
-    """Get activity history for a specific device serial number (admin only)"""
+    """Get complete activity history for a specific device serial number (admin only)"""
+    
+    # Get device info including import date
+    device = await db.devices.find_one({"numer_seryjny": device_serial}, {"_id": 0})
+    
+    # Get activity logs
     logs = await db.activity_logs.find(
         {"device_serial": device_serial},
         {"_id": 0}
@@ -2059,7 +2064,39 @@ async def get_device_history(
         if "timestamp" in log and isinstance(log["timestamp"], datetime):
             log["timestamp"] = log["timestamp"].isoformat()
     
-    return logs
+    # If device was created before activity logging, add synthetic import log
+    if device:
+        created_at = device.get("created_at") or device.get("imported_at")
+        if created_at:
+            # Check if there's no import log for this device
+            has_import_log = any(log.get("action_type") in ["device_import", "device_add"] for log in logs)
+            if not has_import_log:
+                import_log = {
+                    "log_id": f"synthetic_{device.get('device_id', 'unknown')}",
+                    "timestamp": created_at.isoformat() if isinstance(created_at, datetime) else created_at,
+                    "user_id": device.get("imported_by", "system"),
+                    "user_name": "System",
+                    "user_role": "admin",
+                    "action_type": "device_import",
+                    "action_description": f"Dodano urządzenie {device.get('nazwa', 'Nieznane')} ({device_serial}) do magazynu",
+                    "device_serial": device_serial,
+                    "device_name": device.get("nazwa"),
+                    "device_id": device.get("device_id"),
+                    "details": {"source": "initial_import"}
+                }
+                logs.append(import_log)
+                # Re-sort to put import at the end (oldest)
+                logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    
+    # Get installation info if device was installed
+    installation = await db.installations.find_one({"device_id": device.get("device_id") if device else None}, {"_id": 0})
+    
+    return {
+        "device": device,
+        "installation": installation,
+        "logs": logs,
+        "total_events": len(logs)
+    }
 
 @api_router.get("/activity-logs/recent")
 async def get_recent_activity_logs(
