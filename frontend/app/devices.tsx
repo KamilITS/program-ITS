@@ -1616,6 +1616,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
+  content: {
+    flex: 1,
+  },
   listContainer: {
     padding: 16,
     paddingTop: 0,
