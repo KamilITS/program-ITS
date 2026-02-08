@@ -481,6 +481,53 @@ export default function BackupScreen() {
               )}
             </View>
 
+            {/* IMPORT SECTION */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Import danych</Text>
+              <Text style={styles.sectionDescription}>
+                Przywróć dane z kopii zapasowej. Istniejące dane zostaną zaktualizowane lub dodane nowe.
+              </Text>
+
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[styles.importButton, { backgroundColor: '#f59e0b' }]}
+                  onPress={importBackupJSON}
+                  disabled={importingBackup}
+                >
+                  {importingBackup ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="cloud-upload" size={20} color="#fff" />
+                      <Text style={styles.importButtonText}>Import JSON</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.importButton, { backgroundColor: '#8b5cf6' }]}
+                  onPress={importBackupExcel}
+                  disabled={importingBackup}
+                >
+                  {importingBackup ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="document-attach" size={20} color="#fff" />
+                      <Text style={styles.importButtonText}>Import Excel</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {importingBackup && (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color="#f59e0b" />
+                  <Text style={styles.loadingText}>Importowanie danych...</Text>
+                </View>
+              )}
+            </View>
+
             {/* Backup History */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Historia kopii</Text>
