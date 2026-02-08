@@ -1797,6 +1797,260 @@ async def test_ftp_backup(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Błąd: {str(e)}")
 
+@api_router.get("/backup/download-excel")
+async def download_backup_excel(request: Request):
+    """Download backup as Excel file (admin only)"""
+    user = await get_current_user(request)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Brak uprawnień")
+    
+    try:
+        # Get all data
+        users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(10000)
+        devices = await db.devices.find({}, {"_id": 0}).to_list(10000)
+        installations = await db.installations.find({}, {"_id": 0}).to_list(10000)
+        tasks = await db.tasks.find({}, {"_id": 0}).to_list(10000)
+        
+        # Create Excel workbook
+        wb = openpyxl.Workbook()
+        
+        # Users sheet
+        ws_users = wb.active
+        ws_users.title = "Użytkownicy"
+        ws_users.append(["ID", "Email", "Imię", "Rola"])
+        for u in users:
+            ws_users.append([u.get("user_id"), u.get("email"), u.get("name"), u.get("role")])
+        
+        # Devices sheet
+        ws_devices = wb.create_sheet("Urządzenia")
+        ws_devices.append(["ID", "Nazwa", "Numer seryjny", "Kod kreskowy", "Status", "Przypisany do", "Data dodania"])
+        for d in devices:
+            ws_devices.append([
+                d.get("device_id"), d.get("nazwa"), d.get("numer_seryjny"),
+                d.get("kod_kreskowy"), d.get("status"), d.get("przypisany_do"),
+                str(d.get("created_at", "")) if d.get("created_at") else ""
+            ])
+        
+        # Installations sheet
+        ws_inst = wb.create_sheet("Instalacje")
+        ws_inst.append(["ID", "Urządzenie ID", "Instalator", "Adres", "Data instalacji"])
+        for i in installations:
+            ws_inst.append([
+                i.get("installation_id"), i.get("device_id"), i.get("instalator_name"),
+                i.get("adres_klienta"), str(i.get("data_instalacji", "")) if i.get("data_instalacji") else ""
+            ])
+        
+        # Tasks sheet
+        ws_tasks = wb.create_sheet("Zadania")
+        ws_tasks.append(["ID", "Tytuł", "Opis", "Priorytet", "Status", "Przypisany do", "Data wykonania"])
+        for t in tasks:
+            ws_tasks.append([
+                t.get("task_id"), t.get("title"), t.get("description"),
+                t.get("priority"), t.get("status"), t.get("assigned_to_name"),
+                str(t.get("due_date", "")) if t.get("due_date") else ""
+            ])
+        
+        # Save to BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        filename = f"magazyn_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        
+        # Log the download
+        log = {
+            "backup_id": f"backup_{uuid.uuid4().hex[:12]}",
+            "created_at": datetime.now(timezone.utc),
+            "size_bytes": len(output.getvalue()),
+            "status": "success",
+            "sent_email": False,
+            "sent_ftp": False,
+            "downloaded": True,
+            "format": "excel"
+        }
+        await db.backup_logs.insert_one(log)
+        
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+        
+    except Exception as e:
+        logger.error(f"Excel backup download failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Błąd pobierania kopii Excel: {str(e)}")
+
+@api_router.post("/backup/import-json")
+async def import_backup_json(request: Request):
+    """Import backup from JSON file (admin only)"""
+    user = await get_current_user(request)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Brak uprawnień")
+    
+    try:
+        form = await request.form()
+        file = form.get("file")
+        if not file:
+            raise HTTPException(status_code=400, detail="Brak pliku")
+        
+        content = await file.read()
+        data = json.loads(content.decode('utf-8'))
+        
+        result = {"users": 0, "devices": 0, "installations": 0, "tasks": 0, "messages": 0}
+        
+        # Import users (skip if exists by email)
+        if "users" in data:
+            for u in data["users"]:
+                existing = await db.users.find_one({"email": u.get("email")})
+                if not existing:
+                    await db.users.insert_one(u)
+                    result["users"] += 1
+        
+        # Import devices (skip if exists by device_id or numer_seryjny)
+        if "devices" in data:
+            for d in data["devices"]:
+                existing = await db.devices.find_one({
+                    "$or": [
+                        {"device_id": d.get("device_id")},
+                        {"numer_seryjny": d.get("numer_seryjny")}
+                    ]
+                })
+                if not existing:
+                    await db.devices.insert_one(d)
+                    result["devices"] += 1
+        
+        # Import installations (skip if exists)
+        if "installations" in data:
+            for i in data["installations"]:
+                existing = await db.installations.find_one({"installation_id": i.get("installation_id")})
+                if not existing:
+                    await db.installations.insert_one(i)
+                    result["installations"] += 1
+        
+        # Import tasks (skip if exists)
+        if "tasks" in data:
+            for t in data["tasks"]:
+                existing = await db.tasks.find_one({"task_id": t.get("task_id")})
+                if not existing:
+                    await db.tasks.insert_one(t)
+                    result["tasks"] += 1
+        
+        # Import messages (skip if exists)
+        if "messages" in data:
+            for m in data["messages"]:
+                existing = await db.messages.find_one({"message_id": m.get("message_id")})
+                if not existing:
+                    await db.messages.insert_one(m)
+                    result["messages"] += 1
+        
+        return result
+        
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Nieprawidłowy format JSON")
+    except Exception as e:
+        logger.error(f"JSON import failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Błąd importu: {str(e)}")
+
+@api_router.post("/backup/import-excel")
+async def import_backup_excel(request: Request):
+    """Import backup from Excel file (admin only)"""
+    user = await get_current_user(request)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Brak uprawnień")
+    
+    try:
+        form = await request.form()
+        file = form.get("file")
+        if not file:
+            raise HTTPException(status_code=400, detail="Brak pliku")
+        
+        content = await file.read()
+        wb = openpyxl.load_workbook(BytesIO(content))
+        
+        result = {"users": 0, "devices": 0, "installations": 0, "tasks": 0}
+        
+        # Import users from "Użytkownicy" sheet
+        if "Użytkownicy" in wb.sheetnames:
+            ws = wb["Użytkownicy"]
+            rows = list(ws.iter_rows(min_row=2, values_only=True))
+            for row in rows:
+                if row[0] and row[1]:  # user_id, email
+                    existing = await db.users.find_one({"email": row[1]})
+                    if not existing:
+                        new_user = {
+                            "user_id": row[0],
+                            "email": row[1],
+                            "name": row[2] or "Użytkownik",
+                            "role": row[3] or "pracownik",
+                            "password_hash": "imported_no_password"
+                        }
+                        await db.users.insert_one(new_user)
+                        result["users"] += 1
+        
+        # Import devices from "Urządzenia" sheet
+        if "Urządzenia" in wb.sheetnames:
+            ws = wb["Urządzenia"]
+            rows = list(ws.iter_rows(min_row=2, values_only=True))
+            for row in rows:
+                if row[0] and row[2]:  # device_id, numer_seryjny
+                    existing = await db.devices.find_one({"numer_seryjny": row[2]})
+                    if not existing:
+                        new_device = {
+                            "device_id": row[0],
+                            "nazwa": row[1] or "Urządzenie",
+                            "numer_seryjny": row[2],
+                            "kod_kreskowy": row[3] or row[2],
+                            "status": row[4] or "dostepny",
+                            "przypisany_do": row[5],
+                            "created_at": datetime.now(timezone.utc)
+                        }
+                        await db.devices.insert_one(new_device)
+                        result["devices"] += 1
+        
+        # Import installations from "Instalacje" sheet
+        if "Instalacje" in wb.sheetnames:
+            ws = wb["Instalacje"]
+            rows = list(ws.iter_rows(min_row=2, values_only=True))
+            for row in rows:
+                if row[0] and row[1]:  # installation_id, device_id
+                    existing = await db.installations.find_one({"installation_id": row[0]})
+                    if not existing:
+                        new_inst = {
+                            "installation_id": row[0],
+                            "device_id": row[1],
+                            "instalator_name": row[2] or "Nieznany",
+                            "adres_klienta": row[3] or "",
+                            "data_instalacji": datetime.now(timezone.utc)
+                        }
+                        await db.installations.insert_one(new_inst)
+                        result["installations"] += 1
+        
+        # Import tasks from "Zadania" sheet
+        if "Zadania" in wb.sheetnames:
+            ws = wb["Zadania"]
+            rows = list(ws.iter_rows(min_row=2, values_only=True))
+            for row in rows:
+                if row[0] and row[1]:  # task_id, title
+                    existing = await db.tasks.find_one({"task_id": row[0]})
+                    if not existing:
+                        new_task = {
+                            "task_id": row[0],
+                            "title": row[1],
+                            "description": row[2] or "",
+                            "priority": row[3] or "medium",
+                            "status": row[4] or "pending",
+                            "assigned_to_name": row[5],
+                            "created_at": datetime.now(timezone.utc)
+                        }
+                        await db.tasks.insert_one(new_task)
+                        result["tasks"] += 1
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Excel import failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Błąd importu Excel: {str(e)}")
+
 # ==================== DEVICE RETURNS ====================
 
 class DeviceReturn(BaseModel):
