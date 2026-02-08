@@ -1473,10 +1473,14 @@ const styles = StyleSheet.create({
   fullPhotoContainer: {
     width: '100%',
     marginBottom: 16,
+    alignItems: 'center',
   },
   fullPhoto: {
     width: '100%',
-    height: 300,
+    maxWidth: 600,
+    height: undefined,
+    aspectRatio: 4/3,
     borderRadius: 12,
+    resizeMode: 'contain',
   },
 });
