@@ -586,11 +586,31 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
   },
+  adminButtonIconContainer: {
+    position: 'relative',
+  },
   adminButtonText: {
     flex: 1,
     color: '#fff',
     fontSize: 16,
     marginLeft: 12,
+  },
+  ordersBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  ordersBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   // New Tasks Alert Styles
   newTasksAlert: {
