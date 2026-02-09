@@ -89,6 +89,16 @@ export default function Dashboard() {
       
       // Check for new tasks (only for workers)
       await checkForNewTasks(tasks);
+      
+      // Load pending orders count for admins
+      if (user?.role === 'admin') {
+        try {
+          const ordersData = await apiFetch('/api/orders/pending/count');
+          setPendingOrdersCount(ordersData.count || 0);
+        } catch (e) {
+          console.log('Could not load pending orders count');
+        }
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     }
