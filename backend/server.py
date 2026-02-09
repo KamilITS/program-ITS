@@ -2574,6 +2574,46 @@ async def get_pending_orders_count(admin: dict = Depends(require_admin)):
     count = await db.orders.count_documents({"status": "pending"})
     return {"count": count}
 
+@api_router.get("/orders/items")
+async def get_orderable_items(user: dict = Depends(require_user)):
+    """Get additional orderable items (added by admin)"""
+    items = await db.orderable_items.find({}, {"_id": 0}).to_list(100)
+    return items
+
+@api_router.post("/orders/items")
+async def add_orderable_item(request: Request, admin: dict = Depends(require_admin)):
+    """Add a new orderable item (admin only)"""
+    body = await request.json()
+    name = body.get("name", "").strip()
+    
+    if not name:
+        raise HTTPException(status_code=400, detail="Nazwa pozycji jest wymagana")
+    
+    # Check if item already exists
+    existing = await db.orderable_items.find_one({"name": {"$regex": f"^{name}$", "$options": "i"}})
+    if existing:
+        raise HTTPException(status_code=400, detail="Pozycja o takiej nazwie już istnieje")
+    
+    item = {
+        "id": f"item_{uuid.uuid4().hex[:12]}",
+        "name": name,
+        "created_at": get_warsaw_now(),
+        "created_by": admin["user_id"]
+    }
+    
+    await db.orderable_items.insert_one(item)
+    item.pop("_id", None)
+    
+    return item
+
+@api_router.delete("/orders/items/{item_id}")
+async def delete_orderable_item(item_id: str, admin: dict = Depends(require_admin)):
+    """Delete an orderable item (admin only)"""
+    result = await db.orderable_items.delete_one({"id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Nie znaleziono pozycji")
+    return {"message": "Pozycja została usunięta"}
+
 @api_router.get("/orders/{order_id}")
 async def get_order(order_id: str, user: dict = Depends(require_user)):
     """Get single order details"""
