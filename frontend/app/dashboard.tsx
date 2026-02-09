@@ -361,7 +361,15 @@ export default function Dashboard() {
           </View>
         )}
 
-        <View style={{ height: 40 }} />
+        {/* Version Footer */}
+        <View style={styles.versionFooter}>
+          <Ionicons name="git-branch-outline" size={14} color="#444" />
+          <Text style={styles.versionText}>
+            Wersja: 2.1.0 | Zapisano: 08.02.2026, 23:16
+          </Text>
+        </View>
+
+        <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
   );
