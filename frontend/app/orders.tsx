@@ -401,9 +401,7 @@ export default function Orders() {
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Zamówienia</Text>
-          <TouchableOpacity onPress={() => setAddItemModalVisible(true)} style={styles.addButton}>
-            <Ionicons name="add-circle" size={28} color="#10b981" />
-          </TouchableOpacity>
+          <View style={{ width: 40 }} />
         </View>
 
         {/* Pending Orders Badge */}
