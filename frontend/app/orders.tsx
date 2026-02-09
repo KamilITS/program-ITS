@@ -984,11 +984,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#111',
     borderRadius: 12,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   sectionTitle: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  addSectionButton: {
+    padding: 4,
   },
   sectionDescription: {
     color: '#888',
