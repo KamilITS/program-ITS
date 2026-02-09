@@ -482,6 +482,23 @@ export default function Orders() {
                       {formatInWarsaw(selectedOrder.created_at, 'd MMMM yyyy, HH:mm')}
                     </Text>
                   </View>
+                  {selectedOrder.processed_at && (
+                    <View style={styles.orderInfo}>
+                      <Text style={styles.orderInfoLabel}>Data realizacji:</Text>
+                      <Text style={[
+                        styles.orderInfoValue,
+                        selectedOrder.status === 'completed' ? { color: '#10b981' } : { color: '#ef4444' }
+                      ]}>
+                        {formatInWarsaw(selectedOrder.processed_at, 'd MMMM yyyy, HH:mm')}
+                      </Text>
+                    </View>
+                  )}
+                  {selectedOrder.processed_by_name && (
+                    <View style={styles.orderInfo}>
+                      <Text style={styles.orderInfoLabel}>Realizujący:</Text>
+                      <Text style={styles.orderInfoValue}>{selectedOrder.processed_by_name}</Text>
+                    </View>
+                  )}
                   
                   <Text style={styles.orderItemsTitle}>Zamówione pozycje:</Text>
                   {selectedOrder.items
