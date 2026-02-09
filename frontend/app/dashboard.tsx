@@ -306,6 +306,25 @@ export default function Dashboard() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Panel administratora</Text>
             <View style={styles.adminActions}>
+              {/* Orders button with badge */}
+              <TouchableOpacity
+                style={[styles.adminButton, pendingOrdersCount > 0 && { borderColor: '#ef4444', borderWidth: 2 }]}
+                onPress={() => router.push('/orders')}
+              >
+                <View style={styles.adminButtonIconContainer}>
+                  <Ionicons name="cart-outline" size={24} color={pendingOrdersCount > 0 ? '#ef4444' : '#fff'} />
+                  {pendingOrdersCount > 0 && (
+                    <View style={styles.ordersBadge}>
+                      <Text style={styles.ordersBadgeText}>{pendingOrdersCount}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.adminButtonText, pendingOrdersCount > 0 && { color: '#ef4444' }]}>
+                  Zamówienia od pracowników
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={pendingOrdersCount > 0 ? '#ef4444' : '#888'} />
+              </TouchableOpacity>
+              
               <TouchableOpacity
                 style={styles.adminButton}
                 onPress={() => router.push('/users')}
