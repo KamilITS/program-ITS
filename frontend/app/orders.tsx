@@ -297,6 +297,39 @@ export default function Orders() {
   const renderOrderRow = (item: OrderItem, index: number, isCustom: boolean = false) => {
     const hasQuantity = item.orderQuantity && parseInt(item.orderQuantity) > 0;
     
+    // For custom items - simplified row without stock field
+    if (isCustom) {
+      return (
+        <View key={item.id} style={styles.tableRow}>
+          {/* Checkbox */}
+          <View style={styles.checkboxCell}>
+            <Ionicons 
+              name={hasQuantity ? 'checkbox' : 'square-outline'} 
+              size={22} 
+              color={hasQuantity ? '#10b981' : '#444'} 
+            />
+          </View>
+          
+          {/* Item Name - takes more space since no stock cell */}
+          <View style={[styles.nameCell, { flex: 2 }]}>
+            <Text style={styles.itemName}>{item.name}</Text>
+          </View>
+          
+          {/* Order Quantity */}
+          <View style={[styles.orderCell, { width: 80 }]}>
+            <TextInput
+              style={styles.orderInput}
+              value={item.orderQuantity}
+              onChangeText={(value) => updateCustomItem(index, 'orderQuantity', value)}
+              keyboardType="numeric"
+              placeholder="0"
+              placeholderTextColor="#555"
+            />
+          </View>
+        </View>
+      );
+    }
+    
     return (
       <View key={item.id} style={[styles.tableRow, item.subItem && styles.subItemRow]}>
         {/* Checkbox */}
@@ -323,10 +356,7 @@ export default function Orders() {
             <TextInput
               style={styles.stockInput}
               value={item.currentStock}
-              onChangeText={(value) => isCustom 
-                ? updateCustomItem(index, 'currentStock', value)
-                : updateCurrentStock(item.id, value)
-              }
+              onChangeText={(value) => updateCurrentStock(item.id, value)}
               keyboardType="numeric"
               placeholder="-"
               placeholderTextColor="#555"
@@ -339,10 +369,7 @@ export default function Orders() {
           <TextInput
             style={styles.orderInput}
             value={item.orderQuantity}
-            onChangeText={(value) => isCustom
-              ? updateCustomItem(index, 'orderQuantity', value)
-              : updateOrderQuantity(item.id, value)
-            }
+            onChangeText={(value) => updateOrderQuantity(item.id, value)}
             keyboardType="numeric"
             placeholder="0"
             placeholderTextColor="#555"
