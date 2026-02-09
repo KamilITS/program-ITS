@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [tasksCount, setTasksCount] = useState(0);
   const [pendingTasks, setPendingTasks] = useState(0);
   const [newTasksAlert, setNewTasksAlert] = useState<{count: number, titles: string[]} | null>(null);
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
