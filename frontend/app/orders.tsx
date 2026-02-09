@@ -73,6 +73,7 @@ interface Order {
   created_at: string;
   processed_at?: string;
   processed_by?: string;
+  processed_by_name?: string;
 }
 
 export default function Orders() {
