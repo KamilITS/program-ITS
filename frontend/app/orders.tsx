@@ -254,7 +254,7 @@ export default function Orders() {
     try {
       await apiFetch(`/api/orders/${orderId}/process`, {
         method: 'POST',
-        body: JSON.stringify({ status }),
+        body: { status },
       });
       
       Alert.alert('Sukces', status === 'completed' ? 'Zamówienie zostało zrealizowane.' : 'Zamówienie zostało odrzucone.');
@@ -271,7 +271,7 @@ export default function Orders() {
     try {
       await apiFetch('/api/orders/items', {
         method: 'POST',
-        body: JSON.stringify({ name: newItemName.trim() }),
+        body: { name: newItemName.trim() },
       });
       
       Alert.alert('Sukces', 'Pozycja została dodana.');
