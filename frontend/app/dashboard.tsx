@@ -414,6 +414,18 @@ export default function Dashboard() {
                 <Text style={styles.adminButtonText}>Statystyki</Text>
                 <Ionicons name="chevron-forward" size={20} color="#888" />
               </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.adminButton, { borderColor: '#06b6d4', borderWidth: 1 }]}
+                onPress={() => router.push('/vehicles')}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="car" size={24} color="#06b6d4" />
+                  <Ionicons name="construct" size={16} color="#f59e0b" style={{ marginLeft: -6, marginTop: 8 }} />
+                </View>
+                <Text style={[styles.adminButtonText, { color: '#06b6d4' }]}>Pojazdy i wyposażenie</Text>
+                <Ionicons name="chevron-forward" size={20} color="#06b6d4" />
+              </TouchableOpacity>
             </View>
           </View>
         )}
